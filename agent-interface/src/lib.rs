@@ -1,31 +1,57 @@
-pub trait Agent<State, Action> {
-    fn init() -> Self;
+use std::time::Instant;
 
-    //State : Serializable ? string ?
-    fn select_action(&mut self, state: State) -> Option<Action>;
+#[derive(PartialEq,Eq,Debug,Clone,Copy)]
+pub enum Deterministicness {
+    Deterministic,
+    NonDeterministic,
 }
 
-pub trait Game<State, Action> {
+/// Sequential: one player after the other (chess)
+/// Simultaneous: everyone play at the same time (rock-papers-scissors)
+#[derive(PartialEq,Eq,Debug,Clone,Copy)]
+pub enum Sequentialness {
+    Sequential,
+    Simultaneous,
+}
+
+#[derive(PartialEq,Eq,Debug,Clone,Copy)]
+pub enum Information {
+    PerfectInformation,
+    PartialInformation,
+}
+
+#[derive(PartialEq,Eq,Debug,Clone,Copy)]
+pub struct GameInfo {
+    pub num_player : u32,
+    pub deterministicness : Deterministicness,
+    pub sequentialness : Sequentialness,
+    pub information : Information,
+}
+
+pub trait Game<State = String, Action = String> {
     fn init(&mut self);
     fn apply_action(&mut self, action: &Action) -> Result<(), ()>; //non mutable ?, -> bool ?
+    fn get_state(&mut self) -> State;
     fn is_finished(&self) -> bool;
-    fn number_of_players(&self) -> u32; //self necessary for vtable
-    fn is_deterministic(&self) -> bool;
+    fn get_game_info(&self) -> GameInfo;
 
-    //Supposed true for now
-    //fn is_perfect_information(&self) -> bool;  //*has* ?
+}
+pub trait Agent<State = String, Action = String> {
+    fn init(&mut self);
 
-    //Supposed true for now
-    // fn is_sequential(&self) -> bool;
+    //State == String ? (codingame-like)
+    //NOTE: deadline : if using VM, make sure clocks are synch
+    fn select_action(&mut self, state: State, deadline: Instant) -> Option<Action>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::time::Duration;
 
+    use super::*;
     struct DummyGame {}
 
-    impl Game<(), ()> for DummyGame {
+    impl Game<String, ()> for DummyGame {
         fn init(&mut self) {}
 
         fn apply_action(&mut self, _action: &()) -> Result<(), ()> {
@@ -36,18 +62,40 @@ mod tests {
             false
         }
 
-        fn number_of_players(&self) -> u32 {
-            0
+        fn get_state(&mut self) -> String {
+            "".to_string()
         }
-
-        fn is_deterministic(&self) -> bool {
-            true
+        
+        fn get_game_info(&self) -> GameInfo {
+            GameInfo { num_player: 0, 
+                deterministicness: Deterministicness::Deterministic,
+                sequentialness: Sequentialness::Sequential,
+                information: Information::PerfectInformation }
         }
     }
 
     #[test]
-    fn it_works() {
-        let game: Box<dyn Game<(),()>> = Box::new(DummyGame{});
-        assert!(game.is_deterministic());
+    fn test_dyn_game() {
+        let game: Box<dyn Game<String, ()>> = Box::new(DummyGame {});
+        assert!(game.get_game_info().deterministicness == Deterministicness::Deterministic);
+    }
+
+    struct DummyAgent {}
+
+    impl Agent<String, ()> for DummyAgent {
+        fn init(&mut self) {}
+
+        fn select_action(&mut self, _state: String, _deadline: Instant) -> Option<()> {
+            Some(())
+        }
+    }
+
+    #[test]
+    fn test_dyn_agent() {
+        let mut game: Box<dyn Game<String, ()>> = Box::new(DummyGame {});
+        let mut agent: Box<dyn Agent<String, ()>> = Box::new(DummyAgent {});
+        assert!(
+            Some(()) == agent.select_action(game.get_state(), Instant::now() + Duration::from_millis(100))
+        );
     }
 }
