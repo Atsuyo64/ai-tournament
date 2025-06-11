@@ -1,46 +1,20 @@
 use std::time::Instant;
 
-#[derive(PartialEq,Eq,Debug,Clone,Copy)]
-pub enum Deterministicness {
-    Deterministic,
-    NonDeterministic,
-}
-
-/// Sequential: one player after the other (chess)
-/// Simultaneous: everyone play at the same time (rock-papers-scissors)
-#[derive(PartialEq,Eq,Debug,Clone,Copy)]
-pub enum Sequentialness {
-    Sequential,
-    Simultaneous,
-}
-
-#[derive(PartialEq,Eq,Debug,Clone,Copy)]
-pub enum Information {
-    PerfectInformation,
-    PartialInformation,
-}
-
-#[derive(PartialEq,Eq,Debug,Clone,Copy)]
-pub struct GameInfo {
-    pub num_player : u32,
-    pub deterministicness : Deterministicness,
-    pub sequentialness : Sequentialness,
-    pub information : Information,
-}
+mod game_info;
 
 pub trait Game<State = String, Action = String> {
     fn init(&mut self);
-    fn apply_action(&mut self, action: &Action) -> Result<(), ()>; //non mutable ?, -> bool ?
+    fn apply_action(&mut self, action: &Action) -> Result<(), ()>; //non mutable ? -> Option(Self)
     fn get_state(&mut self) -> State;
     fn is_finished(&self) -> bool;
-    fn get_game_info(&self) -> GameInfo;
-
+    fn get_game_info(&self) -> game_info::GameInfo;
 }
+
 pub trait Agent<State = String, Action = String> {
     fn init(&mut self);
 
     //State == String ? (codingame-like)
-    //NOTE: deadline : if using VM, make sure clocks are synch
+    //NOTE: deadline : if using VM, make sure clocks are synch (or use Duration)
     fn select_action(&mut self, state: State, deadline: Instant) -> Option<Action>;
 }
 
@@ -66,18 +40,18 @@ mod tests {
             "".to_string()
         }
         
-        fn get_game_info(&self) -> GameInfo {
-            GameInfo { num_player: 0, 
-                deterministicness: Deterministicness::Deterministic,
-                sequentialness: Sequentialness::Sequential,
-                information: Information::PerfectInformation }
+        fn get_game_info(&self) -> game_info::GameInfo {
+            game_info::GameInfo { num_player: 0, 
+                deterministicness: game_info::Deterministicness::Deterministic,
+                sequentialness: game_info::Sequentialness::Sequential,
+                information: game_info::Information::PerfectInformation }
         }
     }
 
     #[test]
     fn test_dyn_game() {
         let game: Box<dyn Game<String, ()>> = Box::new(DummyGame {});
-        assert!(game.get_game_info().deterministicness == Deterministicness::Deterministic);
+        assert!(game.get_game_info().deterministicness == game_info::Deterministicness::Deterministic);
     }
 
     struct DummyAgent {}
