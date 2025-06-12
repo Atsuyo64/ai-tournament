@@ -64,9 +64,10 @@ mod test_rpc {
         use cgroups_rs::{cgroup_builder::CgroupBuilder, MaxValue};
 
         let mut my_hierarchy = cgroups_rs::hierarchies::auto();
+        //issue: require sudo rights (expected)
         let mut my_group = CgroupBuilder::new("my_cgroup_plz")
             .memory()
-            .memory_hard_limit(1024 * 1024)
+            .memory_hard_limit(1024 * 1024) //in bytes ? (to test)
             .done()
             .pid()
             .maximum_number_of_processes(MaxValue::Value(1)) //FIXME: use cpu().cpus("0-1,4").done() instead ?
