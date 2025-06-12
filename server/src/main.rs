@@ -4,6 +4,9 @@ use agent_interface;
 
 /// Test server
 fn main() {
+    #![allow(unreachable_code)]
+    #![allow(unused)]
+
     let mut game: Box<dyn agent_interface::Game> = todo!();
     let num_players = game.get_game_info().num_player as usize;
     let mut agents: Vec<Box<dyn agent_interface::Agent>> = Vec::with_capacity(num_players);
@@ -25,4 +28,56 @@ fn main() {
         player_index = (player_index + 1) % num_players;
     }
     println!("Looser is agent number {player_index}"); //FIXME: work only for 2 players games, with no score
+}
+
+#[cfg(test)]
+mod test_rpc {
+    use std::{io::Read, process::Stdio};
+
+
+    #[test]
+    fn launch_something() {
+        use std::process;
+
+        let proc = process::Command::new("echo")
+            .args(vec!["Hello", "World"])
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("Could not spawn child");
+        let mut res = proc.stdout.expect("No result ?");
+
+        let mut buffer = String::new();
+        let _length = res
+            .read_to_string(&mut buffer)
+            .expect("Could not make a string ?");
+
+        println!("{buffer}");
+    }
+
+    #[test]
+    fn test_create_cgroup() {
+        //FIXME: temporary
+        #![allow(unused)]
+
+        //TODO: test on non-windows to detect error/show relevant error msg
+        use cgroups_rs;
+        use cgroups_rs::{cgroup_builder::CgroupBuilder, MaxValue};
+
+        let mut my_hierarchy = cgroups_rs::hierarchies::auto();
+        let mut my_group = CgroupBuilder::new("my_cgroup_plz")
+            .memory()
+            .memory_hard_limit(1024 * 1024)
+            .done()
+            .pid()
+            .maximum_number_of_processes(MaxValue::Value(1)) //FIXME: use cpu().cpus("0-1,4").done() instead ?
+            .done()
+            .build(my_hierarchy)
+            .expect("Cgroug could not be created");
+        println!("path: {}", my_group.path());
+        // my_group.apply(todo!()).expect("Failed to apply ressouce limit.");
+
+
+
+        my_group.delete().expect("Could not delete cgroup")
+    }
 }
