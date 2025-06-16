@@ -64,13 +64,21 @@ mod test_rpc {
         use cgroups_rs::{cgroup_builder::CgroupBuilder, MaxValue};
 
         let mut my_hierarchy = cgroups_rs::hierarchies::auto();
+
+        println!("Hierarchy subsystems: {:?}",my_hierarchy.subsystems());
+
+
+        let mut where_to_create = my_hierarchy.subsystems().iter().find(|_| true).unwrap();
+
+
+
         //issue: require sudo rights (expected)
-        let mut my_group = CgroupBuilder::new("my_cgroup_plz")
+        let mut my_group = CgroupBuilder::new("my_cgroup")
             .memory()
-            .memory_hard_limit(1024 * 1024) //in bytes ? (to test)
+            .memory_hard_limit(1024 * 1024 * 16) //in bytes ? (to test)
             .done()
             .pid()
-            .maximum_number_of_processes(MaxValue::Value(1)) //FIXME: use cpu().cpus("0-1,4").done() instead ?
+            //.maximum_number_of_processes(MaxValue::Value(1)) //FIXME: use cpu().cpus("0-1,4").done() instead ?
             .done()
             .build(my_hierarchy)
             .expect("Cgroug could not be created");
