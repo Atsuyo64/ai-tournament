@@ -1,6 +1,5 @@
 use std::time::{Duration, Instant};
 
-use agent_interface;
 
 fn get_current_user_id() -> Result<String, String> {
     let output = match std::process::Command::new("id").arg("-u").output() {
@@ -87,7 +86,7 @@ fn create_cgroup(
 mod test_rpc {
     use std::{
         io::Read,
-        process::{Child, Stdio},
+        process::Stdio,
         time::Duration,
     };
 
@@ -151,32 +150,42 @@ mod test_rpc {
         let id = get_current_user_id().unwrap();
         let path = get_cgroup_path(&id, "my_group");
         let group = create_cgroup(&path, 1024 * 1024, 0, "").unwrap();
+        println!("Cgroup created");
 
         let process = std::process::Command::new("sleep 10").spawn();
         if let Ok(mut child) = process {
             let pid = child.id() as u64;
+            println!("Process {pid} created");
             if let Err(e) = group.add_task(cgroups_rs::CgroupPid { pid }) {
-                println!("Error in add task: {e}");
+                println!("Could not add task to cgroup: {e}");
             } else {
+                println!("Task added to cgroup");
+                println!("Waiting for response...");
                 //sleep for ...ms and then try get result ?
                 //BUT loss time if it finishes "early"
+                println!("Finished waiting");
                 let result = child.stdout.take();
                 let is_late_or_incorrect = match result {
-                    Some(_answer) => false, // !is_answer_ok(answer)
-                    None => true,
+                    Some(_answer) => {println!("The process responded on time and the response is acceptable"); false}, // !is_answer_ok(answer)
+                    None => {println!("Process is late !"); true},
                 };
                 if is_late_or_incorrect {
+                    println!("Attenpting to kill process");
                     //kill
                     group.kill().unwrap_or_else(|e| {
-                        println!("Could not kill process. Must wait 10s to avoid error in cgroup.delete(). Error: {e}");
+                        println!("Could not kill process. Must wait 10s to let it \"die by itself\", to avoid error in cgroup.delete(). Error: {e}");
                         std::thread::sleep(Duration::from_secs(10));
                     });
                 } else {
                     //release (auto ?)
                 }
             }
+        } else {
+            let error = process.unwrap_err();
+            println!("Process creation failed: {}",error);
         }
 
+        println!("Deleting cgroup.");
         group
             .delete()
             .expect("Could not delete cgroup ! Is there any decendant left ?");
