@@ -55,48 +55,67 @@ mod test_rpc {
 
     #[test]
     fn test_create_cgroup() {
-        //FIXME: temporary
-        #![allow(unused)]
+        //NOTE: futur work: implement equivalent for Windows : "Job Object"
+        assert_eq!(
+            std::env::consts::OS,
+            "linux",
+            "Cgroups are only implemented on linux."
+        );
 
-        //TODO: test on non-windows to detect error/show relevant error msg
         use cgroups_rs;
-        use cgroups_rs::{cgroup_builder::CgroupBuilder, MaxValue};
+        use cgroups_rs::cgroup_builder::CgroupBuilder;
 
-        let my_mount = cgroups_rs::hierarchies::mountinfo_self();
-        println!("Mount info: {:?}", my_mount); // == [] ?? (does not parse cgroup2 elements)
+        /*         let my_mount = cgroups_rs::hierarchies::mountinfo_self();
+               println!("Mount info: {:?}", my_mount); // == [] ?? (does not parse cgroup2 elements)
+        */
 
-        match std::fs::File::open("/proc/self/mountinfo") {
+        /* match std::fs::File::open("/proc/self/mountinfo") {
             Ok(mut f) => {
-                let mut s : String = String::new();
-                f.read_to_string(&mut s);
+                let mut s: String = String::new();
+                f.read_to_string(&mut s).unwrap();
                 println!("Content: {s}")
             }
             Err(e) => {
                 println!("Erreur: {e}")
             }
-        }
+        } */
 
-        let mut my_hierarchy = cgroups_rs::hierarchies::auto();
+        let my_hierarchy = cgroups_rs::hierarchies::auto();
         if my_hierarchy.v2() {
             println!("V2 Hierarchy");
         } else {
-            println!("V1 Hierarchy");
+            println!("V1 Hierarchy /!\\ THIS CASE IS UNTESTED");
         }
 
-        println!("Hierarchy subsystems: {:?}", my_hierarchy.subsystems());
+        // println!("Hierarchy subsystems: {:?}", my_hierarchy.subsystems());
 
-        let mut where_to_create = my_hierarchy.subsystems().iter().find(|_| true).unwrap();
+        let my_id: Vec<_> = std::process::Command::new("id")
+            .arg("-u")
+            .output()
+            .expect("Could not launch 'id -u'")
+            .stdout;
+        let my_id =
+            std::str::from_utf8(my_id.as_slice()).expect("ID vec<u8> could not be made into &str").trim();
+
+        println!("User id: {my_id}");
+        
+        let group_name = "my_cgroup";
+
+        let new_group_path = format!("user.slice/user-{my_id}.slice/user@{my_id}.service/{group_name}");
+
+        println!("Future new group path: {new_group_path}");
 
         //NOTE: name == path !
-        let mut my_group = CgroupBuilder::new("user.slice/user-9438.slice/user@9438.service/my_cgroup") //FIXME: hardcoded user id. To change !
-            .memory()
-            .memory_hard_limit(1024 * 1024 * 16) //in bytes ? (to test)
-            .done()
-            .pid()
-            //.maximum_number_of_processes(MaxValue::Value(1)) //FIXME: use cpu().cpus("0-1,4").done() instead ?
-            .done()
-            .build(my_hierarchy)
-            .expect("Cgroug could not be created");
+        let my_group =
+            CgroupBuilder::new(&new_group_path)
+                .memory()
+                .memory_hard_limit(1024 * 1024 * 16) //in bytes ? (to test)
+                .done()
+                .pid()
+                //.maximum_number_of_processes(MaxValue::Value(1)) //FIXME: use cpu().cpus("0-1,4").done() instead ?
+                .done()
+                .build(my_hierarchy)
+                .expect("Cgroug could not be created");
         println!("path: {}", my_group.path());
         // my_group.apply(todo!()).expect("Failed to apply ressouce limit.");
 
