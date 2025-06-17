@@ -2,6 +2,20 @@ use std::time::{Duration, Instant};
 
 use agent_interface;
 
+fn get_current_user_id() -> Result<String, String> {
+    let output = match std::process::Command::new("id").arg("-u").output() {
+        Ok(output) => output,
+        Err(_) => return Err("Could not launch command 'id'".to_string()),
+    };
+
+    let stdout = output.stdout;
+    let untrimed_id = match std::str::from_utf8(&stdout) {
+        Ok(str) => str,
+        Err(_) => return Err("ID is not a valid string".to_string()),
+    };
+    Ok(untrimed_id.trim().to_string())
+}
+
 /// Test server
 fn main() {
     #![allow(unreachable_code)]
@@ -30,9 +44,50 @@ fn main() {
     println!("Looser is agent number {player_index}"); //FIXME: work only for 2 players games, with no score
 }
 
+fn get_cgroup_path(user_id: &str, group_name: &str) -> String {
+    format!("user.slice/user-{user_id}.slice/user@{user_id}.service/{group_name}")
+}
+
+/// Create a cgroup at `path`.
+///
+/// The cgroup will have the provided limitations.
+///
+/// * `max_memory` - Maximum available memory in Bytes. Non-positive means no restriction.
+/// * `max_pids` - Maximum number of PIDS inside the cgroup at any time. Non-positive means no restriction.
+/// * `cpus` - which cpus the members can run one. Uses comma separated cpu ranges ("1-5,7", "1,3,4", ...). Empty string means no restriction.
+///
+/// # Errors
+///
+/// This function will return an error if the cgroup could not be created. This can happen if the parameters are incorrect or if cgroup is not available.
+fn create_cgroup(
+    path: &str,
+    max_memory: i64,
+    max_pids: i64,
+    cpus: &str,
+) -> Result<cgroups_rs::Cgroup, String> {
+    let mut builder = cgroups_rs::cgroup_builder::CgroupBuilder::new(path);
+    if max_memory > 0 {
+        builder = builder.memory().memory_hard_limit(max_memory).done();
+    }
+    if max_pids > 0 {
+        builder = builder
+            .pid()
+            .maximum_number_of_processes(cgroups_rs::MaxValue::Value(max_pids))
+            .done();
+    }
+    if !cpus.is_empty() {
+        builder = builder.cpu().cpus(cpus.to_string()).done();
+    }
+    builder
+        .build(cgroups_rs::hierarchies::auto())
+        .map_err(|e| format!("Could not create cgroup: {e}").to_string())
+}
+
 #[cfg(test)]
 mod test_rpc {
     use std::{io::Read, process::Stdio};
+
+    use crate::{create_cgroup, get_cgroup_path, get_current_user_id};
 
     #[test]
     fn launch_something() {
@@ -62,9 +117,6 @@ mod test_rpc {
             "Cgroups are only implemented on linux."
         );
 
-        use cgroups_rs;
-        use cgroups_rs::cgroup_builder::CgroupBuilder;
-
         /*         let my_mount = cgroups_rs::hierarchies::mountinfo_self();
                println!("Mount info: {:?}", my_mount); // == [] ?? (does not parse cgroup2 elements)
         */
@@ -89,33 +141,19 @@ mod test_rpc {
 
         // println!("Hierarchy subsystems: {:?}", my_hierarchy.subsystems());
 
-        let my_id: Vec<_> = std::process::Command::new("id")
-            .arg("-u")
-            .output()
-            .expect("Could not launch 'id -u'")
-            .stdout;
-        let my_id =
-            std::str::from_utf8(my_id.as_slice()).expect("ID vec<u8> could not be made into &str").trim();
+        let my_id = get_current_user_id().expect("Could not get user ID");
 
         println!("User id: {my_id}");
-        
+
         let group_name = "my_cgroup";
 
-        let new_group_path = format!("user.slice/user-{my_id}.slice/user@{my_id}.service/{group_name}");
+        let new_group_path = get_cgroup_path(&my_id, &group_name);
 
         println!("Future new group path: {new_group_path}");
 
         //NOTE: name == path !
         let my_group =
-            CgroupBuilder::new(&new_group_path)
-                .memory()
-                .memory_hard_limit(1024 * 1024 * 16) //in bytes ? (to test)
-                .done()
-                .pid()
-                //.maximum_number_of_processes(MaxValue::Value(1)) //FIXME: use cpu().cpus("0-1,4").done() instead ?
-                .done()
-                .build(my_hierarchy)
-                .expect("Cgroug could not be created");
+            create_cgroup(&new_group_path, 1024 * 1024, 3, "1-3,5").expect("c'est non...");
         println!("path: {}", my_group.path());
         // my_group.apply(todo!()).expect("Failed to apply ressouce limit.");
 
