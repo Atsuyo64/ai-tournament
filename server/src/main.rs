@@ -85,7 +85,11 @@ fn create_cgroup(
 
 #[cfg(test)]
 mod test_rpc {
-    use std::{io::Read, process::Stdio};
+    use std::{
+        io::Read,
+        process::{Child, Stdio},
+        time::Duration,
+    };
 
     use crate::{create_cgroup, get_cgroup_path, get_current_user_id};
 
@@ -110,7 +114,7 @@ mod test_rpc {
 
     #[test]
     fn test_create_cgroup() {
-        //NOTE: futur work: implement equivalent for Windows : "Job Object"
+        //NOTE: futur work: implement the Windows equivalent: "Job Object"
         assert_eq!(
             std::env::consts::OS,
             "linux",
@@ -134,11 +138,47 @@ mod test_rpc {
 
         println!("Future new group path: {new_group_path}");
 
-        let my_group =
-            create_cgroup(&new_group_path, 1024 * 1024, 3, "1-3,5").expect("Could not create cgroup...");
+        let my_group = create_cgroup(&new_group_path, 1024 * 1024, 3, "1-3,5")
+            .expect("Could not create cgroup...");
         println!("path: {}", my_group.path());
         // my_group.apply(todo!()).expect("Failed to apply ressouce limit.");
 
         my_group.delete().expect("Could not delete cgroup")
+    }
+
+    #[test]
+    fn test_create_process_in_cgroup() {
+        let id = get_current_user_id().unwrap();
+        let path = get_cgroup_path(&id, "my_group");
+        let group = create_cgroup(&path, 1024 * 1024, 0, "").unwrap();
+
+        let process = std::process::Command::new("sleep 10").spawn();
+        if let Ok(mut child) = process {
+            let pid = child.id() as u64;
+            if let Err(e) = group.add_task(cgroups_rs::CgroupPid { pid }) {
+                println!("Error in add task: {e}");
+            } else {
+                //sleep for ...ms and then try get result ?
+                //BUT loss time if it finishes "early"
+                let result = child.stdout.take();
+                let is_late_or_incorrect = match result {
+                    Some(_answer) => false, // !is_answer_ok(answer)
+                    None => true,
+                };
+                if is_late_or_incorrect {
+                    //kill
+                    group.kill().unwrap_or_else(|e| {
+                        println!("Could not kill process. Must wait 10s to avoid error in cgroup.delete(). Error: {e}");
+                        std::thread::sleep(Duration::from_secs(10));
+                    });
+                } else {
+                    //release (auto ?)
+                }
+            }
+        }
+
+        group
+            .delete()
+            .expect("Could not delete cgroup ! Is there any decendant left ?");
     }
 }
