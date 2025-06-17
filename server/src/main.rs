@@ -117,29 +117,12 @@ mod test_rpc {
             "Cgroups are only implemented on linux."
         );
 
-        /*         let my_mount = cgroups_rs::hierarchies::mountinfo_self();
-               println!("Mount info: {:?}", my_mount); // == [] ?? (does not parse cgroup2 elements)
-        */
-
-        /* match std::fs::File::open("/proc/self/mountinfo") {
-            Ok(mut f) => {
-                let mut s: String = String::new();
-                f.read_to_string(&mut s).unwrap();
-                println!("Content: {s}")
-            }
-            Err(e) => {
-                println!("Erreur: {e}")
-            }
-        } */
-
         let my_hierarchy = cgroups_rs::hierarchies::auto();
         if my_hierarchy.v2() {
             println!("V2 Hierarchy");
         } else {
             println!("V1 Hierarchy /!\\ THIS CASE IS UNTESTED");
         }
-
-        // println!("Hierarchy subsystems: {:?}", my_hierarchy.subsystems());
 
         let my_id = get_current_user_id().expect("Could not get user ID");
 
@@ -151,9 +134,8 @@ mod test_rpc {
 
         println!("Future new group path: {new_group_path}");
 
-        //NOTE: name == path !
         let my_group =
-            create_cgroup(&new_group_path, 1024 * 1024, 3, "1-3,5").expect("c'est non...");
+            create_cgroup(&new_group_path, 1024 * 1024, 3, "1-3,5").expect("Could not create cgroup...");
         println!("path: {}", my_group.path());
         // my_group.apply(todo!()).expect("Failed to apply ressouce limit.");
 
