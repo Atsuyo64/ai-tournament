@@ -34,7 +34,6 @@ fn main() {
 mod test_rpc {
     use std::{io::Read, process::Stdio};
 
-
     #[test]
     fn launch_something() {
         use std::process;
@@ -63,17 +62,33 @@ mod test_rpc {
         use cgroups_rs;
         use cgroups_rs::{cgroup_builder::CgroupBuilder, MaxValue};
 
+        let my_mount = cgroups_rs::hierarchies::mountinfo_self();
+        println!("Mount info: {:?}", my_mount); // == [] ?? (does not parse cgroup2 elements)
+
+        match std::fs::File::open("/proc/self/mountinfo") {
+            Ok(mut f) => {
+                let mut s : String = String::new();
+                f.read_to_string(&mut s);
+                println!("Content: {s}")
+            }
+            Err(e) => {
+                println!("Erreur: {e}")
+            }
+        }
+
         let mut my_hierarchy = cgroups_rs::hierarchies::auto();
+        if my_hierarchy.v2() {
+            println!("V2 Hierarchy");
+        } else {
+            println!("V1 Hierarchy");
+        }
 
-        println!("Hierarchy subsystems: {:?}",my_hierarchy.subsystems());
-
+        println!("Hierarchy subsystems: {:?}", my_hierarchy.subsystems());
 
         let mut where_to_create = my_hierarchy.subsystems().iter().find(|_| true).unwrap();
 
-
-
-        //issue: require sudo rights (expected)
-        let mut my_group = CgroupBuilder::new("my_cgroup")
+        //NOTE: name == path !
+        let mut my_group = CgroupBuilder::new("user.slice/user-9438.slice/user@9438.service/my_cgroup") //FIXME: hardcoded user id. To change !
             .memory()
             .memory_hard_limit(1024 * 1024 * 16) //in bytes ? (to test)
             .done()
@@ -84,8 +99,6 @@ mod test_rpc {
             .expect("Cgroug could not be created");
         println!("path: {}", my_group.path());
         // my_group.apply(todo!()).expect("Failed to apply ressouce limit.");
-
-
 
         my_group.delete().expect("Could not delete cgroup")
     }
