@@ -1,16 +1,17 @@
-use std::time::{Duration, Instant};
+use std::{
+    process::Stdio,
+    time::{Duration, Instant},
+};
 
-fn get_current_user_id() -> Result<String, String> {
-    let output = match std::process::Command::new("id").arg("-u").output() {
-        Ok(output) => output,
-        Err(_) => return Err("Could not launch command 'id'".to_string()),
-    };
+use anyhow::{self, Context};
 
+fn get_current_user_id() -> anyhow::Result<String> {
+    let output = std::process::Command::new("id")
+        .arg("-u")
+        .output()
+        .context("Could not launch 'id -u'")?;
     let stdout = output.stdout;
-    let untrimed_id = match std::str::from_utf8(&stdout) {
-        Ok(str) => str,
-        Err(_) => return Err("ID is not a valid string".to_string()),
-    };
+    let untrimed_id = std::str::from_utf8(&stdout).context("id is not a valid string")?;
     Ok(untrimed_id.trim().to_string())
 }
 
@@ -62,7 +63,7 @@ fn create_cgroup(
     max_memory: i64,
     max_pids: i64,
     cpus: &str,
-) -> Result<cgroups_rs::Cgroup, String> {
+) -> anyhow::Result<cgroups_rs::Cgroup> {
     let mut builder = cgroups_rs::cgroup_builder::CgroupBuilder::new(path);
     if max_memory > 0 {
         builder = builder.memory().memory_hard_limit(max_memory).done();
@@ -78,7 +79,7 @@ fn create_cgroup(
     }
     builder
         .build(cgroups_rs::hierarchies::auto())
-        .map_err(|e| format!("Could not create cgroup: {e}").to_string())
+        .context("could not create cgroup")
 }
 
 fn wait_for_process_cleanup(
@@ -89,11 +90,43 @@ fn wait_for_process_cleanup(
     let deadline = Instant::now() + max_duration;
     while cgroup.tasks().iter().any(|cpid| cpid.pid == pid) {
         if Instant::now() > deadline {
-            return Err("Process did not end before timeout".to_string());
+            return Err("process did not end before timeout".to_string());
         }
         std::thread::sleep(std::cmp::min(Duration::from_millis(1), max_duration / 10));
     }
     Ok(())
+}
+
+fn create_process_in_cgroup(
+    command: &str,
+    args: &Vec<&str>,
+    group: &cgroups_rs::Cgroup,
+) -> anyhow::Result<std::process::Child> {
+    let mut child = std::process::Command::new(command)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .with_context(|| format!("command '{command}' not found"))?;
+
+    let pid = child.id() as u64;
+    let addition = group.add_task_by_tgid(cgroups_rs::CgroupPid { pid });
+    if addition.is_err() {
+        let kill = child.kill();
+
+        addition.with_context(|| {
+            if kill.is_ok() {
+                format!("could not add process to cgroup")
+            } else {
+                format!(
+                    "could not add process to cgroup, and process could not be killed either ({})",
+                    kill.unwrap_err()
+                )
+            }
+        })?;
+    }
+    Ok(child)
 }
 
 #[cfg(test)]
@@ -191,9 +224,8 @@ mod test_rpc {
                         println!("Could not kill process. Must wait 10s to let it \"die by itself\", to avoid error in cgroup.delete(). Error: {e}");
                         std::thread::sleep(Duration::from_secs(10));
                     });
-                    wait_for_process_cleanup(&group, pid, Duration::from_millis(100)).unwrap_or_else(|e| {
-                        println!("Process cleanup did not end well: {e}")
-                    });
+                    wait_for_process_cleanup(&group, pid, Duration::from_millis(100))
+                        .unwrap_or_else(|e| println!("Process cleanup did not end well: {e}"));
                 } else {
                     //release (auto ?)
                 }
