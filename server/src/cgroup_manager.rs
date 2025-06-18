@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{self, Context};
 
-fn get_current_user_id() -> anyhow::Result<String> {
+pub fn get_current_user_id() -> anyhow::Result<String> {
     let output = std::process::Command::new("id")
         .arg("-u")
         .output()
@@ -15,7 +15,7 @@ fn get_current_user_id() -> anyhow::Result<String> {
     Ok(untrimed_id.trim().to_string())
 }
 
-/// Test server
+/// Legacy
 fn main() {
     #![allow(unreachable_code)]
     #![allow(unused)]
@@ -43,7 +43,7 @@ fn main() {
     println!("Looser is agent number {player_index}"); //FIXME: work only for 2 players games, with no score
 }
 
-fn get_cgroup_path(user_id: &str, group_name: &str) -> String {
+pub fn get_cgroup_path(user_id: &str, group_name: &str) -> String {
     format!("user.slice/user-{user_id}.slice/user@{user_id}.service/{group_name}")
 }
 
@@ -58,7 +58,7 @@ fn get_cgroup_path(user_id: &str, group_name: &str) -> String {
 /// # Errors
 ///
 /// This function will return an error if the cgroup could not be created. This can happen if the parameters are incorrect or if cgroup is not available.
-fn create_cgroup(
+pub fn create_cgroup(
     path: &str,
     max_memory: i64,
     max_pids: i64,
@@ -82,7 +82,7 @@ fn create_cgroup(
         .context("could not create cgroup")
 }
 
-fn wait_for_process_cleanup(
+pub fn wait_for_process_cleanup(
     cgroup: &cgroups_rs::Cgroup,
     pid: u64,
     max_duration: Duration,
@@ -97,7 +97,7 @@ fn wait_for_process_cleanup(
     Ok(())
 }
 
-fn create_process_in_cgroup(
+pub fn create_process_in_cgroup(
     command: &str,
     args: &Vec<&str>,
     group: &cgroups_rs::Cgroup,
@@ -133,7 +133,7 @@ fn create_process_in_cgroup(
 mod test_rpc {
     use std::{io::Read, process::Stdio, time::Duration};
 
-    use crate::{create_cgroup, get_cgroup_path, get_current_user_id, wait_for_process_cleanup};
+    use super::*;
 
     #[test]
     fn launch_something() {
