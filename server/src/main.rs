@@ -1,6 +1,5 @@
 use std::time::{Duration, Instant};
 
-
 fn get_current_user_id() -> Result<String, String> {
     let output = match std::process::Command::new("id").arg("-u").output() {
         Ok(output) => output,
@@ -82,15 +81,26 @@ fn create_cgroup(
         .map_err(|e| format!("Could not create cgroup: {e}").to_string())
 }
 
+fn wait_for_process_cleanup(
+    cgroup: &cgroups_rs::Cgroup,
+    pid: u64,
+    max_duration: Duration,
+) -> Result<(), String> {
+    let deadline = Instant::now() + max_duration;
+    while cgroup.tasks().iter().any(|cpid| cpid.pid == pid) {
+        if Instant::now() > deadline {
+            return Err("Process did not end before timeout".to_string());
+        }
+        std::thread::sleep(std::cmp::min(Duration::from_millis(1), max_duration / 10));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod test_rpc {
-    use std::{
-        io::Read,
-        process::Stdio,
-        time::Duration,
-    };
+    use std::{io::Read, process::Stdio, time::Duration};
 
-    use crate::{create_cgroup, get_cgroup_path, get_current_user_id};
+    use crate::{create_cgroup, get_cgroup_path, get_current_user_id, wait_for_process_cleanup};
 
     #[test]
     fn launch_something() {
@@ -148,15 +158,14 @@ mod test_rpc {
     #[test]
     fn test_create_process_in_cgroup() {
         let id = get_current_user_id().unwrap();
-        let path = get_cgroup_path(&id, "my_group");
+        let path = get_cgroup_path(&id, "rust_group");
         let group = create_cgroup(&path, 1024 * 1024, 0, "").unwrap();
         println!("Cgroup created");
-
-        let process = std::process::Command::new("sleep 10").spawn();
+        let process = std::process::Command::new("sleep").arg("10").spawn();
         if let Ok(mut child) = process {
             let pid = child.id() as u64;
             println!("Process {pid} created");
-            if let Err(e) = group.add_task(cgroups_rs::CgroupPid { pid }) {
+            if let Err(e) = group.add_task_by_tgid(cgroups_rs::CgroupPid { pid }) {
                 println!("Could not add task to cgroup: {e}");
             } else {
                 println!("Task added to cgroup");
@@ -164,10 +173,16 @@ mod test_rpc {
                 //sleep for ...ms and then try get result ?
                 //BUT loss time if it finishes "early"
                 println!("Finished waiting");
-                let result = child.stdout.take();
+                let result = child.stdout.take(); //FIXME: release ?
                 let is_late_or_incorrect = match result {
-                    Some(_answer) => {println!("The process responded on time and the response is acceptable"); false}, // !is_answer_ok(answer)
-                    None => {println!("Process is late !"); true},
+                    Some(_answer) => {
+                        println!("The process responded on time and the response is acceptable");
+                        false
+                    } // !is_answer_ok(answer)
+                    None => {
+                        println!("Process is late !");
+                        true
+                    }
                 };
                 if is_late_or_incorrect {
                     println!("Attenpting to kill process");
@@ -176,18 +191,22 @@ mod test_rpc {
                         println!("Could not kill process. Must wait 10s to let it \"die by itself\", to avoid error in cgroup.delete(). Error: {e}");
                         std::thread::sleep(Duration::from_secs(10));
                     });
+                    wait_for_process_cleanup(&group, pid, Duration::from_millis(100)).unwrap_or_else(|e| {
+                        println!("Process cleanup did not end well: {e}")
+                    });
                 } else {
                     //release (auto ?)
                 }
             }
         } else {
             let error = process.unwrap_err();
-            println!("Process creation failed: {}",error);
+            println!("Process creation failed: {}", error);
         }
-
         println!("Deleting cgroup.");
-        group
-            .delete()
-            .expect("Could not delete cgroup ! Is there any decendant left ?");
+        group.delete().unwrap_or_else(|e| {
+            println!("Could not delete cgroup ! Is there any decendant left ? ({e})");
+            let procs = group.tasks();
+            println!("PIDS: {:?}", procs);
+        });
     }
 }
