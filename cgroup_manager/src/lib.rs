@@ -1,9 +1,10 @@
 use std::{
-    process::Stdio,
+    process::{Child, Stdio},
     time::{Duration, Instant},
 };
 
 use anyhow::{self, Context};
+use cgroups_rs::{Cgroup, cgroup};
 
 pub fn get_current_user_id() -> anyhow::Result<String> {
     let output = std::process::Command::new("id")
@@ -54,16 +55,40 @@ pub fn create_cgroup(
         .context("could not create cgroup")
 }
 
+#[derive(Debug)]
+struct TimeoutError {}
+
+impl std::fmt::Display for TimeoutError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Timout Error")
+    }
+}
+
+impl std::error::Error for TimeoutError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+
+    fn description(&self) -> &str {
+        "description() is deprecated; use Display"
+    }
+
+    fn cause(&self) -> Option<&dyn std::error::Error> {
+        self.source()
+    }
+}
+
 pub fn wait_for_process_cleanup(
     cgroup: &cgroups_rs::Cgroup,
     pid: u64,
     max_duration: Duration,
-) -> Result<(), String> {
+) -> Result<(), TimeoutError> {
     let deadline = Instant::now() + max_duration;
     while cgroup.tasks().iter().any(|cpid| cpid.pid == pid) {
         if Instant::now() > deadline {
-            return Err("process did not end before timeout".to_string());
+            return Err(TimeoutError {});
         }
+
         std::thread::sleep(std::cmp::min(Duration::from_millis(1), max_duration / 10));
     }
     Ok(())
@@ -99,6 +124,59 @@ pub fn create_process_in_cgroup(
         })?;
     }
     Ok(child)
+}
+
+pub struct LimitedProcess {
+    pub child: Child,
+    cgroup: Cgroup,
+    cleaned_up: bool,
+}
+
+impl LimitedProcess {
+    pub fn launch(
+        command: &str,
+        args: &Vec<&str>,
+        max_memory: i64,
+        cpus: &str,
+    ) -> anyhow::Result<LimitedProcess> {
+        static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);
+        let user_id = get_current_user_id().context("could not get user id")?;
+        //generate a new cgroup name for each Limited Process
+        let group_name = COUNTER
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            .to_string();
+        let path = get_cgroup_path(&user_id, &group_name);
+        let group =
+            create_cgroup(&path, max_memory, 10, cpus).context("could not create cgroup")?;
+        let child = create_process_in_cgroup(command, args, &group).with_context(|| {
+            let _ = group.delete();
+            "could not create process in cgroup"
+        })?;
+
+        Ok(LimitedProcess {
+            child,
+            cgroup: group,
+            cleaned_up: false
+        })
+    }
+
+    pub fn try_kill(&mut self, max_duration: Duration) -> anyhow::Result<()> {
+        self.cgroup.kill().context("could not kill process")?;
+        wait_for_process_cleanup(&self.cgroup, self.child.id() as u64, max_duration).context("process cleanup timed out")?;
+        self.cgroup.delete().context("could not cleanup cgroup")?;
+        self.cleaned_up = true;
+        Ok(())
+    }
+}
+
+impl Drop for LimitedProcess {
+    fn drop(&mut self) {
+        static CLEANUP_DURATION : Duration = Duration::from_millis(10);
+        if !self.cleaned_up {
+            println!("Process {} was not cleaned up before dropping. Trying to clean up for up to {:?}...",self.child.id(),CLEANUP_DURATION);
+            let _ = self.try_kill(CLEANUP_DURATION);
+        }
+    }
 }
 
 #[cfg(test)]
