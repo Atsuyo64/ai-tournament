@@ -1,0 +1,8 @@
+[package]
+name = "cgroup_manager"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cgroups-rs = "0.3.4"
+anyhow = "1.0"

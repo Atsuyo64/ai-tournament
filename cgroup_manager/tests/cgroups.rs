@@ -1,6 +1,6 @@
 use std::{io::Read, process::Stdio, time::Duration};
 
-use server::cgroup_manager::*;
+use cgroup_manager::*;
 
 // use {create_cgroup, get_cgroup_path, get_current_user_id, wait_for_process_cleanup};
 

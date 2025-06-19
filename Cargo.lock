@@ -5,6 +5,9 @@ version = 4
 [[package]]
 name = "agent-interface"
 version = "0.1.0"
+dependencies = [
+ "cgroup_manager",
+]
 
 [[package]]
 name = "aho-corasick"
@@ -38,6 +41,14 @@ name = "cfg-if"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
+
+[[package]]
+name = "cgroup_manager"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cgroups-rs",
+]
 
 [[package]]
 name = "cgroups-rs"
