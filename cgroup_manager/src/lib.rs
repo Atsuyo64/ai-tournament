@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::{self, Context};
-use cgroups_rs::{Cgroup, cgroup};
+use cgroups_rs::Cgroup;
 
 pub fn get_current_user_id() -> anyhow::Result<String> {
     let output = std::process::Command::new("id")
@@ -64,19 +64,7 @@ impl std::fmt::Display for TimeoutError {
     }
 }
 
-impl std::error::Error for TimeoutError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-
-    fn description(&self) -> &str {
-        "description() is deprecated; use Display"
-    }
-
-    fn cause(&self) -> Option<&dyn std::error::Error> {
-        self.source()
-    }
-}
+impl std::error::Error for TimeoutError {}
 
 pub fn wait_for_process_cleanup(
     cgroup: &cgroups_rs::Cgroup,
@@ -139,7 +127,7 @@ impl LimitedProcess {
         max_memory: i64,
         cpus: &str,
     ) -> anyhow::Result<LimitedProcess> {
-        static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);
+        static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);//lazy cell ? (if multiple evaluations at the same time !)
         let user_id = get_current_user_id().context("could not get user id")?;
         //generate a new cgroup name for each Limited Process
         let group_name = COUNTER
@@ -174,6 +162,7 @@ impl Drop for LimitedProcess {
     fn drop(&mut self) {
         static CLEANUP_DURATION: Duration = Duration::from_millis(10);
         if !self.cleaned_up {
+            //FIXME: probably a terrible idea
             println!(
                 "Process {} was not cleaned up before dropping. Trying to clean up for up to {:?}...",
                 self.child.id(),
