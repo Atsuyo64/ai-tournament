@@ -3,27 +3,29 @@ use std::time::Instant;
 pub mod game_info;
 
 /// What the game should imlement
-pub trait Game<State, Action> {
+pub trait Game {
+    type State;
+    type Action;
     fn init(&mut self);
-    fn apply_action(&mut self, action: &Action) -> Result<(), ()>; //non mutable ? -> Option(Self)
+    fn apply_action(&mut self, action: &Self::Action) -> Result<(), ()>; //non mutable ? -> Option(Self)
     /// The state that will be given to the current player(s)
-    fn get_state(&mut self) -> State;
+    fn get_state(&mut self) -> Self::State;
     fn is_finished(&self) -> bool;
     fn get_game_info(&self) -> game_info::GameInfo;
     fn get_player_score(&self,player_number:u32) -> f32;
 }
 
 /// What the agent should implement
-pub trait Agent<State, Action> {
+pub trait Agent<G: Game> {
     fn init(&mut self);
 
     //State == String ? (codingame-like)
     //NOTE: deadline : if using VM, make sure clocks are synch (or use Duration)
-    fn select_action(&mut self, state: State, deadline: Instant) -> Option<Action>;
+    fn select_action(&mut self, state: G::State, deadline: Instant) -> Option<G::Action>;
 }
 
 /// What will be given to the evaluator to allow it to create games
-pub trait GameFactory<State,Action, G: Game<State,Action>> {
+pub trait GameFactory<G : Game> {
     fn new_game(&self) -> G;
 } 
 

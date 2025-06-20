@@ -4,7 +4,10 @@ use agent_interface::*;
 
 struct DummyGame {}
 
-impl Game<String, ()> for DummyGame {
+impl Game for DummyGame {
+    type State = String;
+    type Action = ();
+
     fn init(&mut self) {}
 
     fn apply_action(&mut self, _action: &()) -> Result<(), ()> {
@@ -33,61 +36,59 @@ impl Game<String, ()> for DummyGame {
     }
 }
 
-fn borrow_game<State, Action>(_game: &Box<dyn Game<State, Action>>) {}
+fn borrow_game<G: Game>(_game: &G) {}
 
 #[test]
 fn test_dyn_game() {
-    let game: Box<dyn Game<String, ()>> = Box::new(DummyGame {});
+    let game = DummyGame {};
     borrow_game(&game);
     assert!(game.get_game_info().deterministicness == game_info::Deterministicness::Deterministic);
 }
 
 struct DummyAgent {}
 
-impl Agent<String, ()> for DummyAgent {
+impl Agent<DummyGame> for DummyAgent {
     fn init(&mut self) {}
 
-    fn select_action(&mut self, _state: String, _deadline: Instant) -> Option<()> {
+    fn select_action(
+        &mut self,
+        _state: <DummyGame as Game>::State,
+        _deadline: Instant,
+    ) -> Option<<DummyGame as Game>::Action> {
         Some(())
     }
 }
 
-fn get_agent_action<State, Action>(
-    state: State,
-    _agent: &mut Box<dyn Agent<State, Action>>,
-) -> Option<Action> {
+fn get_agent_action<G: Game, A: Agent<G>>(state: G::State, _agent: &mut A) -> Option<G::Action> {
     _agent.select_action(state, Instant::now())
 }
 
 #[test]
 fn test_dyn_agent() {
-    let mut game: Box<dyn Game<String, ()>> = Box::new(DummyGame {});
-    let mut agent: Box<dyn Agent<String, ()>> = Box::new(DummyAgent {});
+    let mut game = DummyGame {};
+    let mut agent = DummyAgent {};
     assert!(Some(()) == get_agent_action(game.get_state(), &mut agent));
 }
 
 struct DummyFactory {}
 
-impl GameFactory<String, (), DummyGame> for DummyFactory {
+impl GameFactory<DummyGame> for DummyFactory {
     fn new_game(&self) -> DummyGame {
         DummyGame {}
     }
 }
 
+// Legacy code: I will not miss you.
 // fn game_maker<State,Action,G: Game<State,Action>>(factory:&Box<dyn GameFactory<State,Action,DummyGame>>) -> DummyGame  {
 //     factory.new_game()
 // }
 
-fn make_game<State, Action, G: Game<State, Action>, F: GameFactory<State, Action, G>>(
-    factory: &F,
-) -> G {
+fn make_game<G: Game, F: GameFactory<G>>(factory: &F) -> G {
     factory.new_game()
 }
 
 #[test]
 fn test_dyn_factory() {
     let factory = DummyFactory {};
-    //FIXME: Is it possible to create factory_in_a_box from factory ? (probably not)
-    let _factory_in_a_box: Box<dyn GameFactory<String, (), DummyGame>> = Box::new(DummyFactory {});
     assert_eq!(make_game(&factory).get_state(), DummyGame {}.get_state());
 }
