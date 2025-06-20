@@ -1,8 +1,9 @@
 use crate::client_handler;
 
-use agent_interface::{self, GameFactory};
+use agent_interface::{Game, GameFactory};
 use std::{
-    collections::{HashMap, HashSet}, marker::PhantomData, str::FromStr
+    collections::{HashMap, HashSet},
+    str::FromStr,
 };
 
 pub enum MaxMemory {
@@ -33,27 +34,30 @@ impl SystemParams {
     }
 }
 
-pub struct Evaluator<G, State, Action>
+pub struct Evaluator<G, F>
 where
-    State: FromStr + ToString,
-    Action: FromStr + ToString,
-    G: agent_interface::GameFactory<State ,Action> + Sized,
+    G: Game,
+    F: GameFactory<G>,
+    G::State: FromStr + ToString,
+    G::Action: FromStr + ToString,
 {
-    factory: G ,//Box<dyn agent_interface::GameFactory<State, Action>>,
+    factory: F,
     // game: Box<dyn agent_interface::Game<String, String> + 'static>, //'a instead of static ? ('static <=> not a ref)
     params: SystemParams,
+    _ff: std::marker::PhantomData<G>,
 }
 
-impl<State, Action> Evaluator<State, Action>
+impl<G: Game, F: GameFactory<G>> Evaluator<G, F>
 where
-    State: FromStr + ToString,
-    Action: FromStr + ToString,
+    G::State: FromStr + ToString,
+    G::Action: FromStr + ToString,
 {
-    pub fn new(
-        factory: Box<dyn agent_interface::GameFactory<State, Action>>,
-        params: SystemParams,
-    ) -> Evaluator<State, Action> {
-        Evaluator { factory, params }
+    pub fn new(factory: F, params: SystemParams) -> Evaluator<G, F> {
+        Evaluator {
+            factory,
+            params,
+            _ff: std::marker::PhantomData::default(),
+        }
     }
 
     pub fn evaluate(_directory: &std::path::Path) -> HashMap<String, f32> {
@@ -61,7 +65,6 @@ where
         // 2. try to compile each one of them
         // 3. create an tournament of some sort (depending of game_type) for remaining ones
         // 4. run tournament
-        if self.factory.new().game_info.num_players() > 1 {}
         todo!()
     }
 }
