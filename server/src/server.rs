@@ -1,14 +1,18 @@
 #![allow(unused)]
 
-use crate::client_handler;
+use crate::{agent::Agent, client_handler};
 
 use agent_interface::{Game, GameFactory};
 use anyhow::{anyhow, Context};
 use std::{
     collections::{HashMap, HashSet},
+    fs::DirEntry,
+    path::PathBuf,
     slice::SplitMut,
     str::FromStr,
 };
+
+use crate::agent;
 
 pub enum MaxMemory {
     Auto,
@@ -100,11 +104,62 @@ where
         }
     }
 
-    pub fn evaluate(_directory: &std::path::Path) -> HashMap<String, f32> {
+    pub fn evaluate(&self, directory: &std::path::Path) -> anyhow::Result<HashMap<String, f32>> {
         // 1. get agents name & code in *directory*
         // 2. try to compile each one of them
         // 3. create an tournament of some sort (depending of game_type) for remaining ones
         // 4. run tournament
-        todo!()
+
+        if (!directory.is_dir()) {
+            return Err(anyhow!("{directory:?} is not a directory"));
+        }
+        self.compile_agents(directory);
+
+        Ok(HashMap::new())
+        // todo!()
+    }
+
+    fn compile_agents(&self, directory: &std::path::Path) -> Vec<Agent> {
+        let mut vec: Vec<Agent> = Vec::new();
+        const RED: &'static str = "\x1b[31m";
+        const GREEN: &'static str = "\x1b[32m";
+        const RESET: &'static str = "\x1b[0m";
+
+        let longest_name = std::fs::read_dir(directory)
+            .unwrap()
+            .into_iter()
+            .filter_map(|res| res.ok())
+            .fold(0, |acu, entry| acu.max(entry.file_name().len()))
+            + 3; //at least 3 dots
+
+        println!("Compiling agents...");
+
+        for subdir in std::fs::read_dir(directory).unwrap() {
+            let Ok(subdir) = subdir else {
+                continue;
+            };
+            let name = subdir.file_name().into_string().unwrap();
+
+            print!("Compiling {name:.<longest_name$} ");
+
+            if subdir.metadata().unwrap().is_file() {
+                println!("{RED}Not a directory{RESET}");
+                continue;
+            }
+
+            let res = self.compile_agent(&subdir);
+            if res.is_ok() {
+                println!("{GREEN}Ok{RESET}");
+                vec.push(Agent::new(name, Some(res.unwrap())));
+            } else {
+                println!("{RED}Compile error: {}{RESET}", res.unwrap_err());
+                vec.push(Agent::new(name, None));
+            }
+        }
+        vec
+    }
+
+    fn compile_agent(&self, dir: &DirEntry) -> Result<PathBuf, String> {
+        Err("TODO".to_string())
     }
 }
