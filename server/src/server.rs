@@ -5,11 +5,7 @@ use crate::{agent::Agent, client_handler};
 use agent_interface::{Game, GameFactory};
 use anyhow::{anyhow, Context};
 use std::{
-    collections::{HashMap, HashSet},
-    fs::DirEntry,
-    path::PathBuf,
-    slice::SplitMut,
-    str::FromStr,
+    collections::{HashMap, HashSet}, fs::{self, DirEntry}, os::unix::process::CommandExt, path::PathBuf, slice::SplitMut, str::FromStr
 };
 
 use crate::agent;
@@ -96,6 +92,9 @@ where
     G::State: FromStr + ToString,
     G::Action: FromStr + ToString,
 {
+    // Parameter in the future ?
+    const BIN_NAME: &'static str = "eval";
+
     pub fn new(factory: F, params: SystemParams) -> Evaluator<G, F> {
         Evaluator {
             factory,
@@ -152,7 +151,7 @@ where
                 println!("{GREEN}Ok{RESET}");
                 vec.push(Agent::new(name, Some(res.unwrap())));
             } else {
-                println!("{RED}Compile error: {}{RESET}", res.unwrap_err());
+                println!("{RED}{}{RESET}", res.unwrap_err());
                 vec.push(Agent::new(name, None));
             }
         }
@@ -160,6 +159,30 @@ where
     }
 
     fn compile_agent(&self, dir: &DirEntry) -> Result<PathBuf, String> {
-        Err("TODO".to_string())
+        //TODO: check crates used ? (list "abnormal" crates)
+        //TODO: --offline to prevent using other crates than expected ?
+        let args = vec![
+            "build",
+            "--release",
+            "--bin",
+            Self::BIN_NAME,
+            "--message-format",
+            "short",
+        ];
+        let proc = std::process::Command::new("cargo")
+            .args(args)
+            .current_dir(dir.path().canonicalize().unwrap())
+            //.env_clear() // maybe ?
+            .stderr(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .spawn().unwrap();
+
+        let ouput = proc.wait_with_output().expect("failed to wait on child");
+        if ouput.status.success() {
+            let path = dir.path().join(format!("target/release/{}",Self::BIN_NAME));
+            Ok(path)
+        } else {
+            Err(format!("Compilation error ({}): {}",ouput.status.code().unwrap(),std::str::from_utf8(&ouput.stderr).unwrap().trim()))
+        }
     }
 }
