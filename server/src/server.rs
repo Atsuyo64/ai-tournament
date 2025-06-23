@@ -1,8 +1,12 @@
+#![allow(unused)]
+
 use crate::client_handler;
 
 use agent_interface::{Game, GameFactory};
+use anyhow::{anyhow, Context};
 use std::{
     collections::{HashMap, HashSet},
+    slice::SplitMut,
     str::FromStr,
 };
 
@@ -18,8 +22,44 @@ pub enum AvailableCPUs {
 }
 
 impl AvailableCPUs {
-    pub fn from_string(cpus: &str) -> AvailableCPUs {
-        Self::Defined(todo!())
+    pub fn from_string(cpus: &str) -> anyhow::Result<AvailableCPUs> {
+        if cpus.is_empty() {
+            return Ok(AvailableCPUs::Auto);
+        }
+        let mut set: HashSet<u16> = HashSet::new();
+        for item in cpus.split(',') {
+            let mut split = item.split('-');
+            let cnt = split.by_ref().count();
+            if cnt == 1 {
+                let value: &str = split.nth(0).unwrap();
+                let value: u16 = value
+                    .parse()
+                    .with_context(|| format!("could not parse {value}"))?;
+                set.insert(value);
+            } else if cnt == 2 {
+                let start: &str = split.nth(0).unwrap();
+                let start: u16 = start
+                    .parse()
+                    .with_context(|| format!("could not parse {start}"))?;
+                let end: &str = split.nth(0).unwrap();
+                let end: u16 = end
+                    .parse()
+                    .with_context(|| format!("could not parse {end}"))?;
+                let range = if start <= end {
+                    start..=end
+                } else {
+                    end..=start
+                };
+                for i in range {
+                    set.insert(i);
+                }
+            } else {
+                return Err(anyhow!(
+                    "each comma-separated item must be a number or a range ('a-b'), got '{item}'"
+                ));
+            }
+        }
+        Ok(AvailableCPUs::Defined(set))
     }
 }
 
