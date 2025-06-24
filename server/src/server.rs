@@ -98,7 +98,7 @@ where
         Evaluator {
             factory,
             params,
-            _ff: std::marker::PhantomData::default(),
+            _ff: std::marker::PhantomData,
         }
     }
 
@@ -111,21 +111,22 @@ where
         if !directory.is_dir() {
             return Err(anyhow!("{directory:?} is not a directory"));
         }
-        self.compile_agents(directory);
+        let agents = self.compile_agents(directory);
+        let num_remaining = agents
+            .iter()
+            .fold(0, |acu, agent| if agent.compile { acu + 1 } else { acu });
 
         Ok(HashMap::new())
-        // todo!()
     }
 
     fn compile_agents(&self, directory: &std::path::Path) -> Vec<Agent> {
         let mut vec: Vec<Agent> = Vec::new();
-        const RED: &'static str = "\x1b[31m";
-        const GREEN: &'static str = "\x1b[32m";
-        const RESET: &'static str = "\x1b[0m";
+        const RED: &str = "\x1b[31m";
+        const GREEN: &str = "\x1b[32m";
+        const RESET: &str = "\x1b[0m";
 
         let longest_name = std::fs::read_dir(directory)
             .unwrap()
-            .into_iter()
             .filter_map(|res| res.ok())
             .fold(0, |acu, entry| acu.max(entry.file_name().len()))
             + 3; //at least 3 dots
@@ -146,9 +147,9 @@ where
             }
 
             let res = self.compile_agent(&subdir);
-            if res.is_ok() {
+            if let Ok(res) = res {
                 println!("{GREEN}Ok{RESET}");
-                vec.push(Agent::new(name, Some(res.unwrap())));
+                vec.push(Agent::new(name, Some(res)));
             } else {
                 println!("{RED}{}{RESET}", res.unwrap_err());
                 vec.push(Agent::new(name, None));
@@ -168,7 +169,7 @@ where
             "--message-format",
             "short",
         ];
-        
+
         let proc = std::process::Command::new("cargo")
             .args(args)
             .current_dir(dir.path().canonicalize().unwrap())
@@ -195,5 +196,4 @@ where
             ))
         }
     }
-
 }

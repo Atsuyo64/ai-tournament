@@ -101,13 +101,12 @@ pub fn create_process_in_cgroup(
         let kill = child.kill();
 
         addition.with_context(|| {
-            if kill.is_ok() {
-                format!("could not add process to cgroup")
-            } else {
+            if let Err(err) = kill {
                 format!(
-                    "could not add process to cgroup, and process could not be killed either ({})",
-                    kill.unwrap_err()
+                    "could not add process to cgroup, and process could not be killed either ({err})"
                 )
+            } else {
+                "could not add process to cgroup".to_string()
             }
         })?;
     }

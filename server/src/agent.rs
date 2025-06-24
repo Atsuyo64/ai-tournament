@@ -14,7 +14,7 @@ impl Agent {
         Agent {
             name,
             compile: path_to_exe.is_some(),
-            path_to_exe: path_to_exe,
+            path_to_exe,
             scores: vec![],
         }
     }
