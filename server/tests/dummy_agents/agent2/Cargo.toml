@@ -5,4 +5,9 @@ edition = "2024"
 
 [dependencies]
 
+[[bin]]
+name = "eval"
+path = "src/main.rs"
+test = false
+
 [workspace]

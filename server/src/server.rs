@@ -1,14 +1,13 @@
-#![allow(unused)]
-
-use crate::{agent::Agent, client_handler};
+use crate::agent::Agent;
 
 use agent_interface::{Game, GameFactory};
 use anyhow::{anyhow, Context};
 use std::{
-    collections::{HashMap, HashSet}, fs::{self, DirEntry}, os::unix::process::CommandExt, path::PathBuf, slice::SplitMut, str::FromStr
+    collections::{HashMap, HashSet},
+    fs::DirEntry,
+    path::PathBuf,
+    str::FromStr,
 };
-
-use crate::agent;
 
 pub enum MaxMemory {
     Auto,
@@ -109,7 +108,7 @@ where
         // 3. create an tournament of some sort (depending of game_type) for remaining ones
         // 4. run tournament
 
-        if (!directory.is_dir()) {
+        if !directory.is_dir() {
             return Err(anyhow!("{directory:?} is not a directory"));
         }
         self.compile_agents(directory);
@@ -139,7 +138,7 @@ where
             };
             let name = subdir.file_name().into_string().unwrap();
 
-            print!("Compiling {name:.<longest_name$} ");
+            print!("Compiling {name:·<longest_name$} ");
 
             if subdir.metadata().unwrap().is_file() {
                 println!("{RED}Not a directory{RESET}");
@@ -169,20 +168,32 @@ where
             "--message-format",
             "short",
         ];
+        
         let proc = std::process::Command::new("cargo")
             .args(args)
             .current_dir(dir.path().canonicalize().unwrap())
-            //.env_clear() // maybe ?
             .stderr(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
-            .spawn().unwrap();
+            .spawn()
+            .expect("could not launch command 'cargo'");
 
         let ouput = proc.wait_with_output().expect("failed to wait on child");
         if ouput.status.success() {
-            let path = dir.path().join(format!("target/release/{}",Self::BIN_NAME));
+            let path = dir.path().join("target/release/{}").join(Self::BIN_NAME);
             Ok(path)
         } else {
-            Err(format!("Compilation error ({}): {}",ouput.status.code().unwrap(),std::str::from_utf8(&ouput.stderr).unwrap().trim()))
+            Err(format!(
+                "Compilation error: {}",
+                // ouput.status.code().unwrap(),
+                std::str::from_utf8(&ouput.stderr)
+                    .unwrap()
+                    .trim()
+                    .split("\n")
+                    .nth(0)
+                    .unwrap_or_default(),
+                // std::str::from_utf8(&ouput.stdout).unwrap().trim(),
+            ))
         }
     }
+
 }
