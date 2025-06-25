@@ -7,3 +7,4 @@ edition = "2021"
 agent-interface = { path = "../agent-interface" }
 cgroups-rs = "0.3.4"
 anyhow = "1.0"
+sysinfo = "0.35.2"

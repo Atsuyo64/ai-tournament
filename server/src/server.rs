@@ -1,67 +1,85 @@
-use crate::agent::Agent;
+use crate::{agent::Agent, available_resources::AvailableRessources};
+use crate::confrontation::Confrontation;
 
 use agent_interface::{Game, GameFactory};
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs::DirEntry,
     path::PathBuf,
     str::FromStr,
 };
+use sysinfo;
 
+#[derive(Default)]
 pub enum MaxMemory {
+    /// Auto = max physical memory minus 1GB
+    #[default]
     Auto,
     MaxMegaBytes(u16),
     MaxGigaBytes(u16),
 }
 
+/// CPUs used for evaluation. Each CPU can execute only one confrontation simultaneously
+#[derive(Default)]
 pub enum AvailableCPUs {
+    /// Auto = all physical cpus
+    #[default]
     Auto,
-    Defined(HashSet<u16>),
+    /// Limited = any cpus, but not more than specified
+    Limited(u32),
 }
 
-impl AvailableCPUs {
-    pub fn from_string(cpus: &str) -> anyhow::Result<AvailableCPUs> {
-        if cpus.is_empty() {
-            return Ok(AvailableCPUs::Auto);
-        }
-        let mut set: HashSet<u16> = HashSet::new();
-        for item in cpus.split(',') {
-            let mut split = item.split('-');
-            let cnt = split.by_ref().count();
-            if cnt == 1 {
-                let value: &str = split.nth(0).unwrap();
-                let value: u16 = value
-                    .parse()
-                    .with_context(|| format!("could not parse {value}"))?;
-                set.insert(value);
-            } else if cnt == 2 {
-                let start: &str = split.nth(0).unwrap();
-                let start: u16 = start
-                    .parse()
-                    .with_context(|| format!("could not parse {start}"))?;
-                let end: &str = split.nth(0).unwrap();
-                let end: u16 = end
-                    .parse()
-                    .with_context(|| format!("could not parse {end}"))?;
-                let range = if start <= end {
-                    start..=end
-                } else {
-                    end..=start
-                };
-                for i in range {
-                    set.insert(i);
-                }
-            } else {
-                return Err(anyhow!(
-                    "each comma-separated item must be a number or a range ('a-b'), got '{item}'"
-                ));
-            }
-        }
-        Ok(AvailableCPUs::Defined(set))
-    }
-}
+// impl AvailableCPUs {
+//     /// create AvailableCPUs from string using unix-like format (eg. "1,2,4,6", "3-7,10-11,13", ...)
+//     /// 
+//     /// returns Auto if the string is empty
+//     ///
+//     /// # Errors
+//     ///
+//     /// This function will return an error if the given string is ill-formed
+//     pub fn from_string(cpus: &str) -> anyhow::Result<AvailableCPUs> {
+//         if cpus.is_empty() {
+//             return Ok(AvailableCPUs::Auto);
+//         }
+//         let mut set: HashSet<u16> = HashSet::new();
+//         for item in cpus.split(',') {
+//             let mut split = item.split('-');
+//             let cnt = split.by_ref().count();
+//             if cnt == 1 {
+//                 let value: &str = split.nth(0).unwrap();
+//                 let value: u16 = value
+//                     .parse()
+//                     .with_context(|| format!("could not parse {value}"))?;
+//                 set.insert(value);
+//             } else if cnt == 2 {
+//                 let start: &str = split.nth(0).unwrap();
+//                 let start: u16 = start
+//                     .parse()
+//                     .with_context(|| format!("could not parse {start}"))?;
+//                 let end: &str = split.nth(0).unwrap();
+//                 let end: u16 = end
+//                     .parse()
+//                     .with_context(|| format!("could not parse {end}"))?;
+//                 let range = if start <= end {
+//                     start..=end
+//                 } else {
+//                     end..=start
+//                 };
+//                 for i in range {
+//                     set.insert(i);
+//                 }
+//             } else {
+//                 return Err(anyhow!(
+//                     "each comma-separated item must be a number or a range ('a-b'), got '{item}'"
+//                 ));
+//             }
+//         }
+//         Ok(AvailableCPUs::Defined(set))
+//     }
+// }
 
+#[derive(Default)]
 pub struct SystemParams {
     max_memory: MaxMemory,
     cpus: AvailableCPUs,
@@ -114,9 +132,63 @@ where
         let agents = self.compile_agents(directory);
         let num_remaining = agents
             .iter()
-            .fold(0, |acu, agent| if agent.compile { acu + 1 } else { acu });
+            .fold(0u32, |acu, agent| if agent.compile { acu + 1 } else { acu });
+        let game_info = self.factory.new_game().get_game_info();
+
+        let tournament = Self::wip_tournament_maker(num_remaining, &game_info);
+
+        let mut available_resources = self.compute_available_resources();
+
+        //TODO: parrallel for
+        for confrontation in tournament {
+
+        }
 
         Ok(HashMap::new())
+    }
+
+    fn wip_tournament_maker(
+        num_agents: u32,
+        game_info: &agent_interface::game_info::GameInfo,
+    ) -> Vec<Confrontation> {
+        if game_info.num_player == 1 {
+            (0..num_agents)
+                .map(|i| Confrontation {
+                    ordered_player_indexes: vec![i],
+                })
+                .collect()
+        } else {
+            todo!()
+        }
+    }
+
+    fn compute_available_resources(&self) -> AvailableRessources {
+        let mut sys = sysinfo::System::new();
+        
+        let available_cpus = match self.params.cpus {
+            AvailableCPUs::Auto => {
+                sys.refresh_cpu_all();
+                sys.cpus().len() as i32
+            },
+            AvailableCPUs::Limited(limit) => {
+                limit as i32
+            },
+        };
+        
+        let available_megabytes = match self.params.max_memory {
+            MaxMemory::Auto => {
+                sys.refresh_memory();
+                //Auto => use all memory except for 1GB //REVIEW: use 90% ?
+                (sys.available_memory() / 1_000_000 ) as i32 - 1_000
+            },
+            MaxMemory::MaxMegaBytes(max) => max as i32,
+            MaxMemory::MaxGigaBytes(max) => (max * 1_000) as i32,
+        };
+
+        assert!(available_cpus > 0,"Not enough CPUs to process");
+        assert!(available_megabytes > 0,"Not enough memory to process");
+
+        AvailableRessources { available_cpus, available_megabytes }
     }
 
     fn compile_agents(&self, directory: &std::path::Path) -> Vec<Agent> {
