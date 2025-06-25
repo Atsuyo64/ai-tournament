@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+#[derive(Clone,Debug)]
 pub struct Agent {
     pub name: String,
     pub compile: bool,
