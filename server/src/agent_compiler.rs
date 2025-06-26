@@ -1,9 +1,9 @@
-use std::{fs::DirEntry, path::PathBuf};
+use std::{fs::DirEntry, path::PathBuf, sync::Arc};
 
 use crate::agent::Agent;
 
-pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Agent> {
-    let mut vec: Vec<Agent> = Vec::new();
+pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
+    let mut vec: Vec<Arc<Agent>> = Vec::new();
     const RED: &str = "\x1b[31m";
     const GREEN: &str = "\x1b[32m";
     const RESET: &str = "\x1b[0m";
@@ -32,10 +32,10 @@ pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Agent> {
         let res = compile_single_agent(&subdir);
         if let Ok(res) = res {
             println!("{GREEN}Ok{RESET}");
-            vec.push(Agent::new(name, Some(res)));
+            vec.push(Arc::new(Agent::new(name, Some(res))));
         } else {
             println!("{RED}{}{RESET}", res.unwrap_err());
-            vec.push(Agent::new(name, None));
+            vec.push(Arc::new(Agent::new(name, None)));
         }
     }
     vec

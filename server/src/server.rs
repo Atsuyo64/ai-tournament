@@ -1,12 +1,14 @@
-use crate::confrontation::Confrontation;
-use crate::{agent::Agent, available_resources::AvailableRessources};
 use crate::agent_compiler;
+use crate::confrontation::Confrontation;
+use crate::match_runner::run_match;
+use crate::{agent::Agent, available_resources::AvailableRessources};
 
 use agent_interface::{Game, GameFactory};
 use anyhow::anyhow;
+use std::sync::Arc;
 use std::{collections::HashMap, str::FromStr};
 
-#[derive(Default,Clone,Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum MaxMemory {
     /// Auto = max physical memory minus 1GB
     #[default]
@@ -16,7 +18,7 @@ pub enum MaxMemory {
 }
 
 /// CPUs used for evaluation. Each CPU can execute only one confrontation simultaneously
-#[derive(Default,Clone,Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum AvailableCPUs {
     /// Auto = all physical cpus
     #[default]
@@ -74,7 +76,7 @@ pub enum AvailableCPUs {
 //     }
 // }
 
-#[derive(Default,Clone,Copy)]
+#[derive(Default, Clone, Copy)]
 pub struct SystemParams {
     max_memory: MaxMemory,
     cpus: AvailableCPUs,
@@ -84,11 +86,11 @@ impl SystemParams {
     pub fn new(max_memory: MaxMemory, cpus: AvailableCPUs) -> Self {
         Self { max_memory, cpus }
     }
-    
+
     pub fn max_memory(&self) -> &MaxMemory {
         &self.max_memory
     }
-    
+
     pub fn cpus(&self) -> &AvailableCPUs {
         &self.cpus
     }
@@ -128,54 +130,56 @@ where
 
         // 2. try to compile each one of them
         let agents = agent_compiler::compile_all_agents(directory);
-        let num_remaining = agents
-            .iter()
-            .fold(0u32, |acu, agent| if agent.compile { acu + 1 } else { acu });
 
         let game_info = self.factory.new_game().get_game_info();
         // 3. create an tournament of some sort (depending of game_type) for remaining ones
-        let tournament = Self::wip_tournament_maker(num_remaining, &game_info);
+        let tournament = Self::wip_tournament_maker(&agents, &game_info);
 
         let mut _available_resources = AvailableRessources::from(self.params);
 
-        //FIXME: that is a lot of clones
-        let filterd_agents: Vec<Agent> = agents
-            .clone()
-            .into_iter()
-            .filter(|agent| agent.compile)
-            .collect();
+        // //FIXME: that is a lot of clones
+        // let filterd_agents: Vec<Arc<Agent>> = agents
+        //     .clone()
+        //     .into_iter()
+        //     .filter(|agent| agent.compile)
+        //     .collect();
 
         // 4. run tournament
         //TODO: parrallel for
         for confrontation in tournament {
-            let mut contestants = Vec::new();
-            for index in confrontation.ordered_player_indexes {
-                contestants.push(filterd_agents[index as usize].clone());
-            }
-            // let _ = run_match(&contestants,)
+            run_match(&confrontation, self.factory.new_game(), 12);
         }
 
         Ok(HashMap::new())
     }
 
     fn wip_tournament_maker(
-        num_agents: u32,
+        agents: &Vec<Arc<Agent>>,
         game_info: &agent_interface::game_info::GameInfo,
     ) -> Vec<Confrontation> {
+        //NOTE: unlike humans, bots can participate in several confrontations concurrently!
+
         if game_info.num_player == 1 {
-            (0..num_agents)
-                .map(|i| Confrontation {
-                    ordered_player_indexes: vec![i],
+            agents
+                .iter()
+                .filter_map(|agent| {
+                    if agent.compile {
+                        Some(Confrontation {
+                            ordered_player: vec![agent.clone()],
+                        })
+                    } else {
+                        None
+                    }
                 })
                 .collect()
         } else if game_info.num_player == 2 {
             //FIXME: O(n²)
             let mut matches = Vec::new();
-            for i in 0..num_agents {
-                for j in 0..num_agents {
-                    if i != j {
+            for (i,a) in agents.iter().enumerate() {
+                for (j,b) in agents.iter().enumerate() {
+                    if i != j && a.compile && b.compile {
                         matches.push(Confrontation {
-                            ordered_player_indexes: vec![i, j],
+                            ordered_player: vec![a.clone(), b.clone()],
                         });
                     }
                 }

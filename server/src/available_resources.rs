@@ -1,10 +1,11 @@
+use crate::server::*;
+
 #[derive(Debug)]
 pub struct AvailableRessources {
     pub available_cpus : i32,
     pub available_megabytes : i32,
 }
 
-use crate::server::*;
 impl From<crate::server::SystemParams> for AvailableRessources{
 
     fn from(value: crate::server::SystemParams) -> Self {
