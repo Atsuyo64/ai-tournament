@@ -64,7 +64,7 @@ pub fn compile_single_agent(dir: &DirEntry) -> Result<PathBuf, String> {
 
     let ouput = proc.wait_with_output().expect("failed to wait on child");
     if ouput.status.success() {
-        let path = dir.path().join("target/release/{}").join(BIN_NAME);
+        let path = dir.path().join("target/release/").join(BIN_NAME);
         Ok(path)
     } else {
         Err(format!(
