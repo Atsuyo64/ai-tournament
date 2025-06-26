@@ -157,7 +157,8 @@ where
         agents: &Vec<Arc<Agent>>,
         game_info: &agent_interface::game_info::GameInfo,
     ) -> Vec<Confrontation> {
-        //NOTE: unlike humans, bots can participate in several confrontations concurrently!
+        //NOTE: unlike humans, bots can participate in several confrontations concurrently! (potentially more exotic tournaments available)
+        //NOTE: when this will be an iterator, should create channel to 'wake him up' in case of event (end of match + killed agent (=> more resources available))
 
         if game_info.num_player == 1 {
             agents
