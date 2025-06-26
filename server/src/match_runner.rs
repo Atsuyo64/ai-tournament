@@ -42,7 +42,7 @@ where
                 }
             }
         } else {
-            todo!("game.apply_action(None) ?")
+            println!("TODO: game.apply_action(None) ?")
         }
         current_player_number = (current_player_number + 1) % clients.len();
     }
