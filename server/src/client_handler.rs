@@ -73,6 +73,7 @@ impl ClientHandler {
     }
     
     pub fn kill_child(&mut self) -> anyhow::Result<()> {
-        self.child.kill().context("killing child")
+        self.child.kill().context("killing child")?;
+        self.child.wait().map(|_|()).context("waiting for cleanup")
     }
 }
