@@ -7,6 +7,7 @@ use crate::{
 };
 use agent_interface::Game;
 use anyhow::{anyhow, Context};
+use log::{debug, error, trace, warn};
 
 pub fn run_match<G: Game>(confrontation: &Confrontation, mut game: G, _megabytes_per_agent: u32)
 where
@@ -21,7 +22,8 @@ where
 
     clients.iter().for_each(|res| {
         if let Err(e) = res {
-            println!("Error creating client: {e:?}");
+            warn!("Error creating client: {e} : {:?}",e.chain().nth(1));
+            
         }
     });
 
@@ -30,19 +32,20 @@ where
     let mut current_player_number = 0usize;
     game.init();
     while !game.is_finished() {
+        trace!("player to play: {current_player_number}");
         let state = game.get_state().to_string();
         if let Ok(client) = &mut clients[current_player_number] {
             match try_get_action::<G::Action>(client, state) {
                 Err(e) => {
-                    println!("{e}");
-                    todo!()
+                    error!("{e:?}");
+                    todo!("incorrect response")
                 } //NOTE: should think about killing agents in case of error
                 Ok(a) => {
                     game.apply_action(&a).unwrap() //FIXME: should also fix interface tbh...
                 }
             }
         } else {
-            println!("TODO: game.apply_action(None) ?")
+            debug!("TODO: game.apply_action(None) ?")
         }
         current_player_number = (current_player_number + 1) % clients.len();
     }

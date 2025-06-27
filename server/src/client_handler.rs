@@ -6,6 +6,7 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context};
+use log::trace;
 
 use crate::agent::Agent;
 use crate::available_resources;
@@ -25,7 +26,7 @@ impl ClientHandler {
         let path = agent.path_to_exe.as_ref().context("agent path is None")?;
         let port_arg = listener.local_addr()?.port().to_string();
 
-        println!("path {path:?}");
+        trace!("launching client at {path:?}");
 
         //TODO: apply resource limitations
         //REVIEW: communication with piped sdtio ?
@@ -34,8 +35,8 @@ impl ClientHandler {
             .spawn()
             .context("child creation")?;
 
-        thread::sleep(Duration::from_millis(100));
-
+        thread::sleep(Duration::from_millis(100));//NOTE: there is no easy way of having a "accept_with_timout"
+        
         listener
             .set_nonblocking(true)
             .context("setting non-blocking to true")?;

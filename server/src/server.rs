@@ -113,6 +113,7 @@ impl<G: Game, F: GameFactory<G>> Evaluator<G, F>
 where
     G::State: FromStr + ToString,
     G::Action: FromStr + ToString,
+    G : 'static + Send
 {
     pub fn new(factory: F, params: SystemParams) -> Evaluator<G, F> {
         Evaluator {
@@ -137,17 +138,15 @@ where
 
         let mut _available_resources = AvailableRessources::from(self.params);
 
-        // //FIXME: that is a lot of clones
-        // let filterd_agents: Vec<Arc<Agent>> = agents
-        //     .clone()
-        //     .into_iter()
-        //     .filter(|agent| agent.compile)
-        //     .collect();
-
         // 4. run tournament
         //TODO: parrallel for
-        for confrontation in tournament {
-            run_match(&confrontation, self.factory.new_game(), 12);
+        let confrontations = tournament.into_iter().map(|confrontation| {
+            let game = self.factory.new_game();
+            std::thread::spawn(move || run_match(&confrontation, game, 12))
+        }).collect::<Vec<_>>();
+
+        for confrontation in confrontations {
+            confrontation.join().unwrap();
         }
 
         Ok(HashMap::new())

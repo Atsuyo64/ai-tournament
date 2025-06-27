@@ -5,6 +5,7 @@ use std::{
 
 use anyhow::{self, Context};
 use cgroups_rs::Cgroup;
+use log::warn;
 
 pub fn get_current_user_id() -> anyhow::Result<String> {
     let output = std::process::Command::new("id")
@@ -77,7 +78,7 @@ pub fn wait_for_process_cleanup(
             return Err(TimeoutError {});
         }
 
-        std::thread::sleep(std::cmp::min(Duration::from_millis(1), max_duration / 10));
+        std::thread::sleep(std::cmp::min(Duration::from_millis(10), max_duration / 10));
     }
     Ok(())
 }
@@ -161,8 +162,7 @@ impl Drop for LimitedProcess {
     fn drop(&mut self) {
         static CLEANUP_DURATION: Duration = Duration::from_millis(10);
         if !self.cleaned_up {
-            //FIXME: probably a terrible idea
-            println!(
+            warn!(
                 "Process {} was not cleaned up before dropping. Trying to clean up for up to {:?}...",
                 self.child.id(),
                 CLEANUP_DURATION
