@@ -139,7 +139,6 @@ where
         let mut _available_resources = AvailableRessources::from(self.params);
 
         // 4. run tournament
-        //TODO: parrallel for
         let confrontations = tournament.into_iter().map(|confrontation| {
             let game = self.factory.new_game();
             std::thread::spawn(move || run_match(&confrontation, game, 12))

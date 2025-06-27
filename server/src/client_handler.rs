@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::process::Child;
+use std::process::{self, Child};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -27,11 +27,12 @@ impl ClientHandler {
         let port_arg = listener.local_addr()?.port().to_string();
 
         trace!("launching client at {path:?}");
-
+        
         //TODO: apply resource limitations
         //REVIEW: communication with piped sdtio ?
-        let child = std::process::Command::new(path)
+        let child = process::Command::new(path)
             .arg(port_arg)
+            .stdout(process::Stdio::piped())
             .spawn()
             .context("child creation")?;
 
