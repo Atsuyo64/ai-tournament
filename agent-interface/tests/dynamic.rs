@@ -10,7 +10,7 @@ impl Game for DummyGame {
 
     fn init(&mut self) {}
 
-    fn apply_action(&mut self, _action: &()) -> Result<(), ()> {
+    fn apply_action(&mut self, _action: &Option<()>) -> Result<(), ()> {
         Ok(())
     }
 
@@ -33,6 +33,10 @@ impl Game for DummyGame {
 
     fn get_player_score(&self, _player_number: u32) -> f32 {
         0.0
+    }
+    
+    fn get_current_player_number(&self) -> usize {
+        0
     }
 }
 

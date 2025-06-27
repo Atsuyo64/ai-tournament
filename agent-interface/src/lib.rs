@@ -7,9 +7,23 @@ pub trait Game {
     type State;
     type Action;
     fn init(&mut self);
-    fn apply_action(&mut self, action: &Self::Action) -> Result<(), ()>; //non mutable ? -> Option(Self)
-    /// The state that will be given to the current player(s)
+
+    /// Apply an optional action to the game.
+    ///
+    /// `Option<Action>` is necessary because when `num_players >= 3`
+    /// a player might be eliminated by not playing,
+    /// but the game could still continue with the remaining players.
+    /// 
+    /// # Error
+    /// Returned when `action` is not valid (`action` is None, `action` is not allowed, ...).
+    /// 
+    /// Even if `action` is not valid, `current_player` should be updated!
+    fn apply_action(&mut self, action: &Option<Self::Action>) -> Result<(), ()>; //FIXME: should find a better way to tell if `action` is valid (boolean?)
+    
+    /// The current state that will be given to the current player
     fn get_state(&mut self) -> Self::State;
+    /// The number of the player that should play now
+    fn get_current_player_number(&self) -> usize;
     fn is_finished(&self) -> bool;
     fn get_game_info(&self) -> game_info::GameInfo;
     fn get_player_score(&self,player_number:u32) -> f32;
@@ -27,53 +41,4 @@ pub trait Agent<G: Game> {
 /// What will be given to the evaluator to allow it to create games
 pub trait GameFactory<G : Game> {
     fn new_game(&self) -> G;
-} 
-
-
-
-// pub struct TcpAgentServer {
-//     command: String,
-//     args: Vec<String>,
-//     max_agent_memory: i64,
-//     agent_cpus: String,
-// }
-
-// impl TcpAgentServer {
-//     pub fn new(
-//         command: String,
-//         args: Vec<String>,
-//         max_agent_memory: i64,
-//         agent_cpus: String,
-//     ) -> TcpAgentServer {
-//         TcpAgentServer {
-//             command,
-//             args,
-//             max_agent_memory,
-//             agent_cpus,
-//         }
-//     }
-//     pub fn get_command(&self) -> &String {
-//         &self.command
-//     }
-//     pub fn get_args(&self) -> &Vec<String> {
-//         &self.args
-//     }
-// }
-
-// impl<S: ToString + FromStr, A: ToString + FromStr> Agent<S, A> for TcpAgentServer {
-//     fn init(&mut self) {
-//         //cgroup_manager::LimitedProcess::launch(&self.command, &self.args, self.max_agent_memory, &self.agent_cpus);
-//     }
-
-//     fn select_action(&mut self, _state: S, _deadline: Instant) -> Option<A> {
-//         todo!()
-//         // socket.send(state.to_string())
-//         // let result = wait_with_deadline(deadline)
-//         // return result.from_string()
-//     }
-// }
-
-// trait TcpAgentServer<State, Action>  where State: ToString + FromString, Action: ToString + FromString {
-
-//     fn select_Action(&mut self, state: &s)
-// }
+}
