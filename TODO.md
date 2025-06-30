@@ -1,5 +1,6 @@
-- [ ] Proof of concept (priority) (tic tac toe ? rock paper scissors ? (pour changer))
-- [ ] init agent with arguments (clap) data
+- [x] Prototype with dummy game
+- [ ] Proof of concept (priority) (tic tac toe ? rock paper scissors ?)
+- [ ] init agent with arguments (clap) data (where to get argument data ?)
 - [ ] design config file for agents (2 parts : tested agent config<u>s</u> for students + "main" config for evaluation (server-side))
 - [ ] parse config file (first: main config only)
 - [ ] use config to launch agents

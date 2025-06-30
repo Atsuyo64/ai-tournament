@@ -6,7 +6,7 @@ use crate::{
 };
 use agent_interface::Game;
 use anyhow::{anyhow, Context};
-use log::{debug, error, info, trace, warn};
+use log::{error, info, trace, warn};
 
 pub fn run_match<G: Game>(confrontation: &Confrontation, mut game: G, _megabytes_per_agent: u32)
 where

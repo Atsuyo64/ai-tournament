@@ -29,7 +29,7 @@ impl ClientHandler {
         trace!("launching client at {path:?}");
         
         //TODO: apply resource limitations
-        //REVIEW: communication with piped sdtio ?
+        //CHECK: communication with piped sdtio ? => no because we want students to be able to print (without having to use eprintln!()) 
         let child = process::Command::new(path)
             .arg(port_arg)
             .stdout(process::Stdio::piped())
