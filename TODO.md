@@ -7,3 +7,5 @@
 - [ ] read about differents tournaments systems
 - [ ] implement smarter tournaments systems REVIEW: continuous evaluation ? periodic reset ?
 - [ ] Doc: Write somewhere that threads/multiprocess are not possible for agents !
+- [ ] Mesure communication delay
+- [ ] Using a DB (csv) to avoid running same matches (with same agents) again (using binary hash + conf)
