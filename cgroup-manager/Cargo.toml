@@ -6,4 +6,5 @@ edition = "2024"
 [dependencies]
 cgroups-rs = "0.3.4"
 anyhow = "1.0"
-log = "0.4.27"
+tracing = "0.1.41"
+

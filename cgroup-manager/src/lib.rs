@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{self, Context};
 use cgroups_rs::Cgroup;
-use log::warn;
+use tracing::warn;
 
 pub fn get_current_user_id() -> anyhow::Result<String> {
     let output = std::process::Command::new("id")
