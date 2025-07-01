@@ -9,3 +9,4 @@
 - [ ] Doc: Write somewhere that threads/multiprocess are not possible for agents !
 - [ ] Mesure communication delay
 - [ ] Using a DB (csv) to avoid running same matches (with same agents) again (using binary hash + conf)
+- [ ] Check if agents can overflow their piped IO-Buffers
