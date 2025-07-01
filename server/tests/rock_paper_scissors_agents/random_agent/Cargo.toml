@@ -1,0 +1,14 @@
+[package]
+name = "random_agent"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand = "0.9.1"
+agent-interface = { path = "../../../../agent-interface" }
+
+[[bin]]
+name="eval"
+path="src/main.rs"
+
+[workspace]

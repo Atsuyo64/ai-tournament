@@ -1,7 +1,7 @@
-use crate::games::DummyFactory;
+use crate::games::{DummyFactory, RPSWrapper};
 use ::server::server::Evaluator;
 use server::server;
-use std::io::Write;
+use std::{io::Write, str::FromStr};
 
 mod games;
 
@@ -25,10 +25,8 @@ fn init_logger() {
                 record.args()
             )
         })
-        .try_init(); //NOTE: migh change is_test to false
+        .try_init(); //NOTE: might change is_test to false
 }
-
-//[WARN  server::match_runner] Error c
 
 #[test]
 fn launch_dummy() {
@@ -38,4 +36,20 @@ fn launch_dummy() {
     let evaluator = Evaluator::new(DummyFactory {}, params);
     let path = std::env::current_dir().unwrap().join("tests/dummy_agents");
     let _ = evaluator.evaluate(path.as_path()).unwrap();
+}
+
+#[test]
+fn launch_rock_paper_scissors() {
+    init_logger();
+
+    let params  = server::SystemParams::new(server::MaxMemory::Auto, server::AvailableCPUs::Auto);
+    let evaluator = Evaluator::new(RPSWrapper::default(), params);
+    let path = std::env::current_dir().unwrap().join("tests/rock_paper_scissors_agents");
+    let _ = evaluator.evaluate(path.as_path()).unwrap();
+}
+
+#[test]
+fn test_from_str() -> Result<(),String> {
+    let _state = crate::games::PlayerState::from_str("0\n")?;
+    Ok(())
 }
