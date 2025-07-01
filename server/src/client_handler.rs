@@ -37,7 +37,7 @@ impl ClientHandler {
             .context("child creation")?;
 
         thread::sleep(Duration::from_millis(100));//NOTE: there is no easy way of having a "accept_with_timout"
-        
+        //TODO: semi busy waiting
         listener
             .set_nonblocking(true)
             .context("setting non-blocking to true")?;
@@ -51,13 +51,14 @@ impl ClientHandler {
         self.stream
             .set_nonblocking(true)
             .context("setting non-blocking for 'write'")?;
+
         match self.stream.write(msg) {
             Ok(0) => {
                 return Err(anyhow!("connection closed by client"));
             }
             Ok(n) => {
                 if n < msg.len() {
-                    return Err(anyhow!("only {} bytes were sent out of {}", n, msg.len()));
+                    return Err(anyhow!("only {}/{} bytes were sent", n, msg.len()));
                 }
             }
             Err(e) => {

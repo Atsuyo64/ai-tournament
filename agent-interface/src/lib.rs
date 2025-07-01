@@ -19,6 +19,7 @@ pub trait Game {
     /// 
     /// Even if `action` is not valid, `current_player` should be updated!
     fn apply_action(&mut self, action: &Option<Self::Action>) -> Result<(), ()>; //FIXME: should find a better way to tell if `action` is valid (boolean?)
+    //FIXME: Option<&>
     
     /// The current state that will be given to the current player
     fn get_state(&mut self) -> Self::State;
