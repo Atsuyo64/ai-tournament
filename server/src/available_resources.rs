@@ -41,6 +41,7 @@ impl From<crate::server::SystemParams> for AvailableRessources {
 }
 
 //TODO: implement
+#[derive(Debug)]
 pub struct GlobalResourceLimit {
     megabytes: u32,
     cpus: std::collections::HashSet<u8>, //Vec ?
@@ -48,6 +49,7 @@ pub struct GlobalResourceLimit {
     cpu_per_agent: u8,
 }
 
+#[derive(Debug)]
 pub struct MatchResourceLimit {
     megabytes_per_agent: u32,
     cpus: Vec<u8>,

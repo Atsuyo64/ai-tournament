@@ -6,8 +6,9 @@ use crate::{
 };
 use agent_interface::Game;
 use anyhow::{anyhow, Context};
-use log::{error, info, trace, warn};
+use tracing::{error, info, instrument, trace, warn};
 
+#[instrument(skip_all,fields(VS=confrontation.to_string()))]
 pub fn run_match<G: Game>(confrontation: &Confrontation, mut game: G, _megabytes_per_agent: u32)
 where
     G::Action: FromStr,

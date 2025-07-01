@@ -6,7 +6,7 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context};
-use log::trace;
+use tracing::{instrument, trace};
 
 use crate::agent::Agent;
 use crate::available_resources;
@@ -17,6 +17,7 @@ pub struct ClientHandler {
 }
 
 impl ClientHandler {
+    #[instrument]
     pub fn init(
         agent: Arc<Agent>,
         _resources: available_resources::MatchResourceLimit,
