@@ -1,6 +1,5 @@
 use crate::games::{DummyFactory, RPSWrapper};
-use ::server::server::Evaluator;
-use server::server;
+use ::server::{constraints::ConstraintsBuilder, server::Evaluator};
 use std::str::FromStr;
 use tracing::Level;
 
@@ -28,7 +27,7 @@ fn init_logger() {
 fn launch_dummy() {
     init_logger();
 
-    let params = server::SystemParams::new(server::MaxMemory::Auto, server::AvailableCPUs::Auto);
+    let params = ConstraintsBuilder::new().build().unwrap();
     let evaluator = Evaluator::new(DummyFactory {}, params);
     let path = std::env::current_dir().unwrap().join("tests/dummy_agents");
     let _ = evaluator.evaluate(path.as_path()).unwrap();
@@ -38,7 +37,7 @@ fn launch_dummy() {
 fn launch_rock_paper_scissors() {
     init_logger();
 
-    let params = server::SystemParams::new(server::MaxMemory::Auto, server::AvailableCPUs::Auto);
+    let params = ConstraintsBuilder::new().build().unwrap();
     let evaluator = Evaluator::new(RPSWrapper::default(), params);
     let path = std::env::current_dir()
         .unwrap()

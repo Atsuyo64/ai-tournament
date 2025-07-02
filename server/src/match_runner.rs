@@ -1,15 +1,14 @@
 use std::{str::FromStr, time::Duration};
 
 use crate::{
-    constraints::MatchResourceLimit, client_handler::ClientHandler,
-    confrontation::Confrontation,
+    client_handler::ClientHandler, confrontation::Confrontation, constraints::Constraints
 };
 use agent_interface::Game;
 use anyhow::{anyhow, Context};
 use tracing::{error, info, instrument, trace, warn};
 
 #[instrument(skip_all,fields(VS=confrontation.to_string()))]
-pub fn run_match<G: Game>(confrontation: &Confrontation, mut game: G, _megabytes_per_agent: u32)
+pub fn run_match<G: Game>(confrontation: &Confrontation, mut game: G, constraints: Constraints)
 where
     G::Action: FromStr,
     G::State: ToString,
@@ -18,7 +17,7 @@ where
     let mut clients: Vec<_> = confrontation
         .ordered_player
         .iter()
-        .map(|agent| ClientHandler::init(agent.clone(), MatchResourceLimit::empty())) //FIXME: resources limit
+        .map(|agent| ClientHandler::init(agent.clone(), &constraints)) //FIXME: resources limit
         .collect();
 
     clients.iter().for_each(|res| {

@@ -3,75 +3,6 @@ use std::{collections::HashSet, env, time::Duration};
 use anyhow::{bail, Context};
 use tracing::warn;
 
-use crate::server::*;
-
-//TODO: rename module
-
-#[derive(Debug)]
-pub struct AvailableRessources {
-    pub available_cpus: i32,
-    pub available_megabytes: i32,
-}
-
-impl From<crate::server::SystemParams> for AvailableRessources {
-    fn from(value: crate::server::SystemParams) -> Self {
-        let mut sys = sysinfo::System::new();
-
-        let available_cpus = match value.cpus() {
-            AvailableCPUs::Auto => {
-                sys.refresh_cpu_all();
-                sys.cpus().len() as i32
-            }
-            AvailableCPUs::Limited(limit) => *limit as i32,
-        };
-
-        let available_megabytes = match value.max_memory() {
-            MaxMemory::Auto => {
-                sys.refresh_memory();
-                //Auto => use all memory except for 1GB //REVIEW: use 90% ?
-                (sys.available_memory() / 1_000_000) as i32 - 1_000
-            }
-            MaxMemory::MaxMegaBytes(max) => *max as i32,
-            MaxMemory::MaxGigaBytes(max) => (*max * 1_000) as i32,
-        };
-
-        assert!(available_cpus > 0, "Not enough CPUs to process");
-        assert!(available_megabytes > 0, "Not enough memory to process");
-
-        AvailableRessources {
-            available_cpus,
-            available_megabytes,
-        }
-    }
-}
-
-//TODO: implement
-#[derive(Debug)]
-pub struct GlobalResourceLimit {
-    megabytes: u32,
-    cpus: std::collections::HashSet<u8>, //Vec ?
-    megabytes_per_agent: u32,
-    cpu_per_agent: u8,
-}
-
-#[derive(Debug)]
-pub struct MatchResourceLimit {
-    megabytes_per_agent: u32,
-    cpus: Vec<u8>,
-    cpu_per_agent: u8,
-}
-
-//FIXME: temporary
-impl MatchResourceLimit {
-    pub fn empty() -> MatchResourceLimit {
-        MatchResourceLimit {
-            megabytes_per_agent: 0,
-            cpus: vec![],
-            cpu_per_agent: 0,
-        }
-    }
-}
-
 #[derive(Debug, Default)]
 enum AutoCpus {
     #[default]
@@ -79,51 +10,6 @@ enum AutoCpus {
     Count(usize),
     List(String),
 }
-
-// impl FromStr for AutoCpus {
-//     type Err = ();
-
-//     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//         // pub fn from_string(cpus: &str) -> anyhow::Result<AvailableCPUs> {
-//             if s.is_empty() {
-//                 return Ok(Self::Auto);
-//             }
-//             let mut set: HashSet<u16> = HashSet::new();
-//             for item in s.split(',') {
-//                 let mut split = item.split('-');
-//                 let cnt = split.by_ref().count();
-//                 if cnt == 1 {
-//                     let value: &str = split.nth(0).unwrap();
-//                     let value: u16 = value
-//                         .parse()
-//                         .with_context(|| format!("could not parse {value}"))?;
-//                     set.insert(value);
-//                 } else if cnt == 2 {
-//                     let start: &str = split.nth(0).unwrap();
-//                     let start: u16 = start
-//                         .parse()
-//                         .with_context(|| format!("could not parse {start}"))?;
-//                     let end: &str = split.nth(0).unwrap();
-//                     let end: u16 = end
-//                         .parse()
-//                         .with_context(|| format!("could not parse {end}"))?;
-//                     let range = if start <= end {
-//                         start..=end
-//                     } else {
-//                         end..=start
-//                     };
-//                     for i in range {
-//                         set.insert(i);
-//                     }
-//                 } else {
-//                     return Err(anyhow!(
-//                         "each comma-separated item must be a number or a range ('a-b'), got '{item}'"
-//                     ));
-//                 }
-//             }
-//             Ok(AvailableCPUs::Defined(set))
-//     }
-// }
 
 /// A builder for defining resource constraints for agent execution environments.
 ///
@@ -325,7 +211,7 @@ impl ConstraintsBuilder {
 
         let total_ram = self.total_ram.unwrap_or_else(|| {
             sys.refresh_memory();
-            //FIXME: sys.total_memory() ? REVIEW:
+            //REVIEW: sys.total_memory() ?
             (sys.available_memory() / 1_000_000) as usize
         });
 

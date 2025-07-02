@@ -9,7 +9,7 @@ use anyhow::{anyhow, Context};
 use tracing::{instrument, trace};
 
 use crate::agent::Agent;
-use crate::constraints;
+use crate::constraints::Constraints;
 
 pub struct ClientHandler {
     stream: TcpStream,
@@ -17,10 +17,10 @@ pub struct ClientHandler {
 }
 
 impl ClientHandler {
-    #[instrument]
+    #[instrument(skip_all,fields(Agent=agent.name))]
     pub fn init(
         agent: Arc<Agent>,
-        _resources: constraints::MatchResourceLimit,
+        _resources: &Constraints,
     ) -> anyhow::Result<ClientHandler> {
         let listener = TcpListener::bind("127.0.0.1:0").context("listener creation")?;
 

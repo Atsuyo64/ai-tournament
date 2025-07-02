@@ -79,6 +79,7 @@ pub enum RpsAction {
     Scissors,
 }
 
+#[allow(dead_code)]
 impl RpsAction {
     /// Any number of players supported (however, more players = more ties)
     pub fn get_winners(actions: &[Option<RpsAction>]) -> Option<RpsAction> {
