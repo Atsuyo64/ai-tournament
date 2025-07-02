@@ -1,6 +1,6 @@
 - [x] Prototype with dummy game
 - [x] Proof of concept (priority) (tic tac toe ? rock paper scissors ?)
-- [ ] find a better way to configure/deal with restrictions
+- [x] find a better way to configure/deal with restrictions
 - [ ] apply restrictions to agents
 - [ ] collects scores
 - [ ] create lots of agents with strange behavior
@@ -8,7 +8,7 @@
 - [ ] design config file for agents (2 parts : tested agent config<u>s</u> for students + "main" config for evaluation (server-side))
 - [ ] parse config file (first: main config only)
 - [ ] init agent with arguments (clap) data (where to get argument data ?)
-- [ ] read about differents tournaments systems
+- [x] read about differents tournaments systems
 - [ ] implement smarter tournaments systems REVIEW: continuous evaluation ? periodic reset ?
 - [ ] tournament iterator should check constraints
 - [ ] Doc: Write somewhere that threads/multiprocess are not possible for agents !
