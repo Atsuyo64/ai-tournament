@@ -1,7 +1,7 @@
 use std::{str::FromStr, time::Duration};
 
 use crate::{
-    available_resources::MatchResourceLimit, client_handler::ClientHandler,
+    constraints::MatchResourceLimit, client_handler::ClientHandler,
     confrontation::Confrontation,
 };
 use agent_interface::Game;

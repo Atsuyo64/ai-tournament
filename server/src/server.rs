@@ -1,7 +1,7 @@
 use crate::agent_compiler;
 use crate::confrontation::Confrontation;
 use crate::match_runner::run_match;
-use crate::{agent::Agent, available_resources::AvailableRessources};
+use crate::{agent::Agent, constraints::AvailableRessources};
 
 use agent_interface::{Game, GameFactory};
 use anyhow::anyhow;
