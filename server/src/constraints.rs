@@ -239,7 +239,14 @@ impl ConstraintsBuilder {
         let time_budget = self.time_budget;
         let action_time = self.action_time;
 
-        Ok(Constraints { total_ram, agent_ram, cpus, cpus_per_agent, time_budget, action_time })
+        Ok(Constraints {
+            total_ram,
+            agent_ram,
+            cpus,
+            cpus_per_agent,
+            time_budget,
+            action_time,
+        })
     }
 }
 
@@ -284,7 +291,7 @@ fn cpu_list_to_hashset(s: &str) -> anyhow::Result<HashSet<u8>> {
 }
 
 /// Obtained using `ConstraintsBuilder`
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct Constraints {
     pub(crate) total_ram: usize,
     pub(crate) agent_ram: Option<usize>,
@@ -297,5 +304,39 @@ pub struct Constraints {
 impl Constraints {
     pub fn builder() -> ConstraintsBuilder {
         ConstraintsBuilder::new()
+    }
+
+    pub(crate) fn add(&mut self, res: Constraints) {
+        self.total_ram += res.total_ram;
+        self.cpus.extend(res.cpus);
+    }
+
+    pub(crate) fn take(&mut self, num_cpus: usize, ram: usize) -> Constraints {
+        let mut cpus = HashSet::new();
+        self.total_ram -= ram;
+        for _ in 0..num_cpus {
+            let cpu = self.cpus.iter().next().unwrap().clone();
+            self.cpus.take(&cpu);
+            cpus.insert(cpu);
+        }
+        Constraints {
+            total_ram: ram,
+            cpus,
+            ..*self
+        }
+    }
+
+    pub(crate) fn with_cpus_and_ram<I: IntoIterator<Item = u8>>(
+        cpus: I,
+        ram: usize,
+    ) -> Constraints {
+        Constraints {
+            total_ram: ram,
+            agent_ram: None,
+            cpus: cpus.into_iter().collect(),
+            cpus_per_agent: 1,
+            time_budget: None,
+            action_time: None,
+        }
     }
 }

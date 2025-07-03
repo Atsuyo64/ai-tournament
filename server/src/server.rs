@@ -1,13 +1,14 @@
+use crate::agent::Agent;
 use crate::agent_compiler;
 use crate::confrontation::Confrontation;
 use crate::constraints::Constraints;
 use crate::match_runner::run_match;
-use crate::agent::Agent;
+use crate::tournament_maker::TournamentMaker;
 
 use agent_interface::{Game, GameFactory};
 use anyhow::anyhow;
 use std::sync::Arc;
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
 pub struct Evaluator<G, F>
 where
@@ -25,7 +26,7 @@ impl<G: Game, F: GameFactory<G>> Evaluator<G, F>
 where
     G::State: FromStr + ToString,
     G::Action: FromStr + ToString,
-    G : 'static + Send
+    G: 'static + Send,
 {
     pub fn new(factory: F, params: Constraints) -> Evaluator<G, F> {
         Evaluator {
@@ -35,7 +36,7 @@ where
         }
     }
 
-    pub fn evaluate(&self, directory: &std::path::Path) -> anyhow::Result<HashMap<String, f32>> {
+    pub fn evaluate(&self, directory: &std::path::Path) -> anyhow::Result<Vec<(String, f32)>> {
         // 1. get agents name & code in *directory*
         if !directory.is_dir() {
             return Err(anyhow!("{directory:?} is not a directory"));
@@ -45,24 +46,21 @@ where
         let agents = agent_compiler::compile_all_agents(directory);
 
         let game_info = self.factory.new_game().get_game_info();
+        
         // 3. create an tournament of some sort (depending of game_type) for remaining ones
-        let tournament = Self::wip_tournament_maker(&agents, &game_info);
-
+        let mut tournament_maker = TournamentMaker::new(agents, self.params.clone(), game_info);
+        
         // 4. run tournament
-        let confrontations = tournament.into_iter().map(|confrontation| {
+        while let Some(match_settings) = tournament_maker.next() {
             let game = self.factory.new_game();
-            let cons = self.params.clone();
-            std::thread::spawn(move || run_match(&confrontation, game, cons))
-        }).collect::<Vec<_>>();
-
-        for confrontation in confrontations {
-            confrontation.join().unwrap();
+            std::thread::spawn(move || run_match(match_settings, game));
+            /* should not have to join threads */
         }
 
-        Ok(HashMap::new())
+        Ok(tournament_maker.get_final_scores())
     }
 
-    fn wip_tournament_maker(
+    fn _wip_tournament_maker(
         agents: &Vec<Arc<Agent>>,
         game_info: &agent_interface::game_info::GameInfo,
     ) -> Vec<Confrontation> {
@@ -85,8 +83,8 @@ where
         } else if game_info.num_player == 2 {
             //FIXME: O(n²)
             let mut matches = Vec::new();
-            for (i,a) in agents.iter().enumerate() {
-                for (j,b) in agents.iter().enumerate() {
+            for (i, a) in agents.iter().enumerate() {
+                for (j, b) in agents.iter().enumerate() {
                     if i != j && a.compile && b.compile {
                         matches.push(Confrontation {
                             ordered_player: vec![a.clone(), b.clone()],

@@ -1,23 +1,33 @@
 use std::{str::FromStr, time::Duration};
 
 use crate::{
-    client_handler::ClientHandler, confrontation::Confrontation, constraints::Constraints
+    client_handler::ClientHandler,
+    tournament_maker::MatchSettings,
 };
 use agent_interface::Game;
 use anyhow::{anyhow, Context};
 use tracing::{error, info, instrument, trace, warn};
 
-#[instrument(skip_all,fields(VS=confrontation.to_string()))]
-pub fn run_match<G: Game>(confrontation: &Confrontation, mut game: G, constraints: Constraints)
+#[instrument(skip_all,fields(VS=match_settings.to_string()))]
+pub fn run_match<G: Game>(match_settings: MatchSettings, mut game: G)
 where
     G::Action: FromStr,
     G::State: ToString,
 {
+    let MatchSettings {
+        ordered_player,
+        resources,
+        on_resource_free,
+        on_final_score,
+    } = match_settings;
+    assert_eq!(
+        resources.cpus.len(),
+        resources.cpus_per_agent * ordered_player.len()
+    );
     info!("new match started");
-    let mut clients: Vec<_> = confrontation
-        .ordered_player
+    let mut clients: Vec<_> = ordered_player
         .iter()
-        .map(|agent| ClientHandler::init(agent.clone(), &constraints)) //FIXME: resources limit
+        .map(|agent| ClientHandler::init(agent.clone(), &resources)) //FIXME: resources limit
         .collect();
 
     clients.iter().for_each(|res| {
@@ -42,7 +52,7 @@ where
             Err(e) => {
                 warn!(
                     "no response from agent {:?} : {e}",
-                    confrontation.ordered_player[current_player_number]
+                    ordered_player[current_player_number]
                         .path_to_exe
                         .as_ref()
                         .unwrap()
@@ -60,7 +70,7 @@ where
         if game.apply_action(&Some(action)).is_err() {
             warn!(
                 "invalid action from agent {:?}",
-                confrontation.ordered_player[current_player_number]
+                ordered_player[current_player_number]
                     .path_to_exe
                     .as_ref()
                     .unwrap()
