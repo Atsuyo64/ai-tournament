@@ -1,8 +1,7 @@
 use std::{str::FromStr, time::Duration};
 
 use crate::{
-    client_handler::ClientHandler,
-    tournament_maker::MatchSettings,
+    client_handler::ClientHandler, tournament_maker::MatchSettings,
 };
 use agent_interface::Game;
 use anyhow::{anyhow, Context};
@@ -16,7 +15,7 @@ where
 {
     let MatchSettings {
         ordered_player,
-        resources,
+        mut resources,
         on_resource_free,
         on_final_score,
     } = match_settings;
@@ -25,16 +24,23 @@ where
         resources.cpus_per_agent * ordered_player.len()
     );
     info!("new match started");
-    let mut clients: Vec<_> = ordered_player
-        .iter()
-        .map(|agent| ClientHandler::init(agent.clone(), &resources)) //FIXME: resources limit
-        .collect();
 
-    clients.iter().for_each(|res| {
-        if let Err(e) = res {
+    let cpu_per_agent = resources.cpus_per_agent;
+    let ram_per_agent = resources.agent_ram;
+    let num_players = ordered_player.len();
+
+    let mut clients = Vec::with_capacity(num_players);
+    let mut agents_resources = Vec::with_capacity(num_players);
+
+    for i in 0..ordered_player.len() {
+        let res = resources.take(cpu_per_agent, ram_per_agent);
+        clients.push(ClientHandler::init(ordered_player[i].clone(), &res));
+        agents_resources.push(res);
+        if let Err(e) = &clients[i] {
             warn!("Error creating client: {e} : {:?}", e.chain().nth(1));
+            on_resource_free.send(agents_resources[i].clone()).unwrap();
         }
-    });
+    }
 
     let mut current_player_number;
     game.init();
@@ -64,6 +70,9 @@ where
                     .kill_child()
                     .map_err(|e| error!("could not kill client {e}"));
                 clients[current_player_number] = Err(anyhow!("stopped"));
+                on_resource_free
+                    .send(agents_resources[current_player_number].clone())
+                    .unwrap();
                 continue;
             }
         };
@@ -80,17 +89,23 @@ where
                 .unwrap()
                 .kill_child()
                 .map_err(|e| error!("could not kill client {e}"));
+            on_resource_free
+                .send(agents_resources[current_player_number].clone())
+                .unwrap();
             clients[current_player_number] = Err(anyhow!("stopped"));
         }
     }
-
-    //TODO: update scores
-
-    clients.iter_mut().for_each(|c| {
+    
+    clients.iter_mut().enumerate().for_each(|(i,c)| {
         if let Ok(c) = c {
-            c.kill_child().unwrap()
+            c.kill_child().unwrap();
+            on_resource_free.send(agents_resources[i].clone()).unwrap();
         }
     });
+    
+    let scores = (0..num_players as u32).map(|i| game.get_player_score(i)).collect::<Vec<_>>();
+    //TODO: update scores
+    //TODO: on_score_update
 }
 
 fn try_get_action<A>(client: &mut ClientHandler, state: String) -> anyhow::Result<A>

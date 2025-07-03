@@ -291,7 +291,7 @@ fn cpu_list_to_hashset(s: &str) -> anyhow::Result<HashSet<u8>> {
 }
 
 /// Obtained using `ConstraintsBuilder`
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct Constraints {
     pub(crate) total_ram: usize,
     pub(crate) agent_ram: Option<usize>,
@@ -311,19 +311,27 @@ impl Constraints {
         self.cpus.extend(res.cpus);
     }
 
-    pub(crate) fn take(&mut self, num_cpus: usize, ram: usize) -> Constraints {
+    pub(crate) fn take(&mut self, num_cpus: usize, ram: Option<usize>) -> Constraints {
         let mut cpus = HashSet::new();
-        self.total_ram -= ram;
+        let ram = if let Some(ram) = ram {
+            self.total_ram -= ram;
+            ram
+        } else {
+            0
+        };
         for _ in 0..num_cpus {
-            let cpu = self.cpus.iter().next().unwrap().clone();
-            self.cpus.take(&cpu);
-            cpus.insert(cpu);
+            cpus.insert(self.take_one_cpu());
         }
         Constraints {
             total_ram: ram,
             cpus,
             ..*self
         }
+    }
+
+    pub(crate) fn take_one_cpu(&mut self) -> u8 {
+        let cpu = self.cpus.iter().next().unwrap().clone();
+        self.cpus.take(&cpu).unwrap()
     }
 
     pub(crate) fn with_cpus_and_ram<I: IntoIterator<Item = u8>>(

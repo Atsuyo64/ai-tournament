@@ -114,7 +114,7 @@ impl TournamentMaker {
                 .expect("resources deadlock (should not be possible)");
             self.resources.add(res);
         }
-        self.resources.take(req_cpus, req_ram)
+        self.resources.take(req_cpus, Some(req_ram))
     }
 }
 
