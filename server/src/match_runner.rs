@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Display, str::FromStr, sync::Arc, time::Duration};
+use std::{fmt::Display, str::FromStr, sync::Arc, time::Duration};
 
 // use crate::{
 //     client_handler::ClientHandler, tournament_maker::MatchSettings,
@@ -162,7 +162,7 @@ where
     G::Action: FromStr,
     G::State: ToString,
 {
-
+    //FIXME: that is very much a placeholder. Please don't try this at home
     std::thread::sleep(Duration::from_millis(100));
 
     // Random winner for now

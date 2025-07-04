@@ -1,8 +1,7 @@
-use agent_interface::game_info::GameInfo;
-
 use crate::agent::Agent;
 use crate::constraints::Constraints;
 use crate::match_runner::{MatchResult, MatchSettings};
+use crate::tournament_strategy::TournamentStrategy;
 use std::sync::Arc;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -12,7 +11,7 @@ pub struct ScoreKey;
 pub struct Scores;
 
 impl Scores {
-    pub fn init<I: IntoIterator<Item = Arc<Agent>>>(_agents: &I) -> Self {
+    pub fn init() -> Self {
         Scores
     }
 
@@ -25,34 +24,29 @@ impl Scores {
     }
 }
 
-pub struct Tournament {
-    pub agents: Vec<Arc<Agent>>,
+pub struct TournamentScheduler<S: TournamentStrategy> {
+    // pub agents: Vec<Arc<Agent>>,
     pub scores: Scores,
     pub resources: Constraints,
-    pub game_info: GameInfo,
     pub pending_matches: Vec<Vec<Arc<Agent>>>,
-    pub current_round: usize,
-    pub total_rounds: usize,
     running_matches: usize,
+    strategy: S,
 }
 
-impl Tournament {
+impl<S: TournamentStrategy> TournamentScheduler<S> {
     pub fn new(
-        agents: Vec<Arc<Agent>>,
+        // agents: Vec<Arc<Agent>>,
         resources: Constraints,
-        game_info: GameInfo,
-        total_rounds: usize,
+        strategy: S,
     ) -> Self {
-        let scores = Scores::init(&agents);
-        Tournament {
-            agents,
+        let scores = Scores::init(); //&agents);
+        TournamentScheduler {
+            // agents,
             scores,
             resources,
-            game_info,
             pending_matches: vec![],
-            current_round: 0,
-            total_rounds,
             running_matches: 0,
+            strategy,
         }
     }
 
@@ -60,19 +54,21 @@ impl Tournament {
         let mut matches_to_run = vec![];
 
         // Generate new round if needed
-        if self.running_matches == 0 && self.pending_matches.is_empty() && self.current_round < self.total_rounds {
-            self.current_round += 1;
-            self.generate_pairings();
+        if self.running_matches == 0
+            && self.pending_matches.is_empty()
+            && !self.strategy.is_complete()
+        {
+            self.strategy.advance_round(&self.scores);
+            self.pending_matches = self.strategy.get_pending_tuples();
         }
 
-        let cpu_per_match = self.resources.cpus_per_agent * self.game_info.num_player as usize;
+        let cpu_per_match = self.resources.cpus_per_agent * self.strategy.players_per_match();
         let ram_per_match =
-            self.resources.agent_ram.unwrap_or(0) * self.game_info.num_player as usize;
-        // Schedule as many pending matches as we have free CPUs
+            self.resources.agent_ram.unwrap_or(0) * self.strategy.players_per_match();
+        // Schedule as many pending matches as long as there is enough resources
         let mut remaining = vec![];
         for v in self.pending_matches.drain(..) {
             if let Some(resources) = self.resources.try_take(cpu_per_match, ram_per_match) {
-                self.running_matches += 1;
                 matches_to_run.push(MatchSettings {
                     ordered_player: v,
                     resources,
@@ -82,19 +78,19 @@ impl Tournament {
             }
         }
         self.pending_matches = remaining;
+        self.running_matches += matches_to_run.len();
         matches_to_run
     }
 
     pub fn on_result(&mut self, result: MatchResult) -> Vec<MatchSettings> {
-        // Update scores
-        self.running_matches -= 1;
         self.scores.add_score(result.results);
         self.resources.add(result.resources);
+        self.running_matches -= 1;
         self.tick()
     }
 
     pub fn is_finished(&self) -> bool {
-        self.current_round >= self.total_rounds
+        self.strategy.is_complete()
             && self.pending_matches.is_empty()
             && self.running_matches == 0
     }
@@ -107,25 +103,5 @@ impl Tournament {
         // results.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
         // results
         self.scores.clone()
-    }
-
-    fn generate_pairings(&mut self) {
-        assert!(self.pending_matches.is_empty());
-        // Sort agents by score
-        let mut sorted = self.agents.clone();
-        sorted.sort_by_key(|agent| std::cmp::Reverse(self.scores.get_key(agent)));
-
-        // Pair top with next (simple Swiss pairing)
-        self.pending_matches = sorted
-            .chunks(2)
-            .filter_map(|chunk| {
-                if chunk.len() == 2 {
-                    Some(chunk.to_vec())
-                } else {
-                    //TODO: bye
-                    None
-                }
-            })
-            .collect();
     }
 }

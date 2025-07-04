@@ -1,14 +1,13 @@
-use crate::agent::Agent;
 use crate::agent_compiler;
-use crate::confrontation::Confrontation;
 use crate::constraints::Constraints;
 use crate::match_runner::run_match;
-use crate::tournament::{Scores, Tournament};
+use crate::tournament::{Scores, TournamentScheduler};
+use crate::tournament_strategy::SwissStrategy;
 
 use agent_interface::{Game, GameFactory};
 use anyhow::anyhow;
 use std::str::FromStr;
-use std::sync::{mpsc, Arc};
+use std::sync::mpsc;
 
 pub struct Evaluator<G, F>
 where
@@ -46,11 +45,14 @@ where
         // 2. try to compile each one of them
         let agents = agent_compiler::compile_all_agents(directory);
 
-        let game_info = self.factory.new_game().get_game_info();
+        let _game_info = self.factory.new_game().get_game_info();
+        //FIXME: deffering choice responsability to caller ?
+        // Caller whould choose the tournament strategy ? (and could possibly "pipe" them ?)
 
         // 3. create an tournament of some sort (depending of game_type) for remaining ones
-        let total_rounds = 4; /* ceil(log2(num_players)) ? */
-        let mut tournament = Tournament::new(agents, self.params.clone(),game_info, total_rounds);
+        let max_rounds = 4; /* ceil(log2(num_players)) ? */
+        let strategy = SwissStrategy::new(agents, max_rounds);
+        let mut tournament = TournamentScheduler::new(self.params.clone(),strategy);
 
         let (tx_result, rx_result) = mpsc::channel();
         let (tx_match, rx_match) = mpsc::channel();

@@ -2,7 +2,8 @@
 - [x] Proof of concept (priority) (tic tac toe ? rock paper scissors ?)
 - [x] find a better way to configure/deal with restrictions
 - [ ] add logs to matches
-- [ ] separate scheduler logic from tournament logic
+- [x] separate scheduler logic from tournament logic
+- [ ] implement bye logic
 - [ ] apply restrictions to agents
 - [ ] collects scores
 - [ ] create lots of agents with strange behavior

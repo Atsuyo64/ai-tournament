@@ -2,6 +2,7 @@ mod client_handler;
 mod agent;
 mod confrontation;
 // mod tournament_maker;
+mod tournament_strategy;
 mod tournament;
 pub mod constraints;
 mod agent_compiler;
