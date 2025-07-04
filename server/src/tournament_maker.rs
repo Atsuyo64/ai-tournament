@@ -42,7 +42,7 @@ pub struct TournamentMaker {
 
 impl TournamentMaker {
     pub fn new(agents: Vec<Arc<Agent>>, resources: Constraints, game_info: GameInfo) -> Self {
-        //TODO: check 'resources VS game_info' to avoid blocking wait
+        //TODO: check 'resources VS game_info' to avoid forever waiting for resources
         let (resource_sender, resource_receiver) = mpsc::channel();
         let (score_sender, score_receiver) = mpsc::channel();
         Self {
