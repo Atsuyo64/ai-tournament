@@ -133,27 +133,3 @@ impl Iterator for TournamentMaker {
         })
     }
 }
-
-#[derive(Debug)]
-pub struct MatchSettings {
-    pub ordered_player: Vec<Arc<Agent>>,
-    pub resources: Constraints,
-    pub on_resource_free: Sender<Constraints>,
-    pub on_final_score: Sender<Score>,
-}
-
-impl Display for MatchSettings {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = self
-            .ordered_player
-            .iter()
-            .fold(String::new(), |acu, agent| {
-                if acu.is_empty() {
-                    acu + &agent.name
-                } else {
-                    acu + " VS " + &agent.name
-                }
-            });
-        write!(f, "[{s}]")
-    }
-}

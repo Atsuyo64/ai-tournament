@@ -50,6 +50,7 @@ impl Game for DummyGame {
     }
 }
 
+#[derive(Clone)]
 pub struct DummyFactory {}
 
 impl GameFactory<DummyGame> for DummyFactory {
@@ -157,6 +158,7 @@ impl Display for RpsAction {
     }
 }
 
+#[derive(Clone)]
 pub struct RockPaperScissors {
     num_players: usize,
     scores: Vec<i32>,
@@ -191,6 +193,7 @@ impl RockPaperScissors {
     }
 }
 
+#[derive(Clone)]
 pub struct RPSWrapper {
     rps: RockPaperScissors,
     actions_buffer: Vec<Option<RpsAction>>,
@@ -199,6 +202,7 @@ pub struct RPSWrapper {
     state: RpsState,
 }
 
+#[derive(Clone)]
 pub struct RpsState {
     pub previous_actions: Vec<Option<RpsAction>>,
 }

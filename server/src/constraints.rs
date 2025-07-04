@@ -311,21 +311,25 @@ impl Constraints {
         self.cpus.extend(res.cpus);
     }
 
-    pub(crate) fn take(&mut self, num_cpus: usize, ram: Option<usize>) -> Constraints {
+    pub(crate) fn take(&mut self, num_cpus: usize, ram: usize) -> Constraints {
         let mut cpus = HashSet::new();
-        let ram = if let Some(ram) = ram {
-            self.total_ram -= ram;
-            ram
-        } else {
-            0
-        };
         for _ in 0..num_cpus {
             cpus.insert(self.take_one_cpu());
         }
+        self.total_ram -= ram;
         Constraints {
             total_ram: ram,
             cpus,
             ..*self
+        }
+    }
+
+    pub(crate) fn try_take(&mut self, num_cpus: usize, ram: usize) -> Option<Constraints> {
+        if self.cpus.len() >= num_cpus && self.total_ram >= ram {
+            Some(self.take(num_cpus, ram))
+        }
+        else {
+            None
         }
     }
 
