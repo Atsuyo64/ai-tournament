@@ -6,11 +6,12 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context};
-use tracing::{instrument, trace};
+use tracing::{error, instrument, trace};
 
 use crate::agent::Agent;
 use crate::constraints::Constraints;
 
+#[derive(Debug)]
 pub struct ClientHandler {
     stream: TcpStream,
     child: Child,
@@ -27,7 +28,7 @@ impl ClientHandler {
         let path = agent.path_to_exe.as_ref().context("agent path is None")?;
         let port_arg = listener.local_addr()?.port().to_string();
 
-        trace!("launching client at {path:?}");
+        trace!("launching client");
         
         //TODO: apply resource limitations
         let mut child = process::Command::new(path)
@@ -51,6 +52,7 @@ impl ClientHandler {
         }
     }
 
+    #[instrument]
     pub fn send_and_recv(&mut self, msg: &[u8],buf: &mut[u8], max_duration: Duration) -> anyhow::Result<usize> {
         self.stream
             .set_nonblocking(true)
@@ -62,6 +64,7 @@ impl ClientHandler {
             }
             Ok(n) => {
                 if n < msg.len() {
+                    error!("only {}/{} bytes of {} were sent", n, msg.len(),std::str::from_utf8(msg).unwrap());
                     return Err(anyhow!("only {}/{} bytes were sent", n, msg.len()));
                 }
             }
