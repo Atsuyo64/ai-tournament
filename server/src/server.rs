@@ -71,7 +71,7 @@ where
         });
 
         // 5. Init matches
-        for m in tournament.tick() {
+        for m in tournament.advance() {
             tx_match.send(m).unwrap();
         }
 

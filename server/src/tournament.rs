@@ -50,7 +50,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
         }
     }
 
-    pub fn tick(&mut self) -> Vec<MatchSettings> {
+    pub fn advance(&mut self) -> Vec<MatchSettings> {
         let mut matches_to_run = vec![];
 
         // Generate new round if needed
@@ -86,7 +86,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
         self.scores.add_score(result.results);
         self.resources.add(result.resources_freed);
         self.running_matches -= 1;
-        self.tick()
+        self.advance()
     }
 
     pub fn is_finished(&self) -> bool {
