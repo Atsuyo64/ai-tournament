@@ -72,7 +72,7 @@ where
 
     game.init();
 
-    while !game.is_finished() && clients.len() > 0 {
+    while !game.is_finished() && !clients.is_empty() {
         let current = game.get_current_player_number();
         let time_budget = time_budgets[current];
         let chrono_start = std::time::Instant::now();
@@ -128,10 +128,9 @@ where
         time_budgets[current] -= elapsed;
 
         // Apply action (even if it's None, Game is suppposed to handle elimination logic)
-        if let Err(_) = game.apply_action(&action) {
-            if action.is_some() {
-                warn!("player {}'s action rejected by Game", current);
-            }
+        // Only warn when a non-None action is rejected
+        if game.apply_action(&action).is_err() && action.is_some() {
+            warn!("player {}'s action rejected by Game", current);
         }
     }
 

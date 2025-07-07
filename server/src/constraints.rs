@@ -259,17 +259,17 @@ fn cpu_list_to_hashset(s: &str) -> anyhow::Result<HashSet<u8>> {
         let mut split = item.split('-');
         let cnt = item.split('-').count();
         if cnt == 1 {
-            let value: &str = split.nth(0).unwrap();
+            let value: &str = split.next().unwrap();
             let value: u8 = value
                 .parse()
                 .with_context(|| format!("could not parse {value}"))?;
             set.insert(value);
         } else if cnt == 2 {
-            let start: &str = split.nth(0).unwrap();
+            let start: &str = split.next().unwrap();
             let start: u8 = start
                 .parse()
                 .with_context(|| format!("could not parse {start}"))?;
-            let end: &str = split.nth(0).unwrap();
+            let end: &str = split.next().unwrap();
             let end: u8 = end
                 .parse()
                 .with_context(|| format!("could not parse {end}"))?;
@@ -327,14 +327,13 @@ impl Constraints {
     pub(crate) fn try_take(&mut self, num_cpus: usize, ram: usize) -> Option<Constraints> {
         if self.cpus.len() >= num_cpus && self.total_ram >= ram {
             Some(self.take(num_cpus, ram))
-        }
-        else {
+        } else {
             None
         }
     }
 
     pub(crate) fn take_one_cpu(&mut self) -> u8 {
-        let cpu = self.cpus.iter().next().unwrap().clone();
+        let cpu = *self.cpus.iter().next().unwrap();
         self.cpus.take(&cpu).unwrap()
     }
 
