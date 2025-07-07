@@ -99,7 +99,7 @@ impl RpsAction {
         }
 
         // if !at_least_two {
-        //     //only one type
+        //     // only one type
         //     if contains_rock {
         //         return Some(Self::Rock);
         //     } else if contains_paper {

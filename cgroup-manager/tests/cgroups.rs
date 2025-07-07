@@ -72,8 +72,8 @@ fn test_create_process_in_cgroup() {
         } else {
             println!("Task added to cgroup");
             println!("Waiting for response...");
-            //sleep for ...ms and then try get result ?
-            //BUT loss time if it finishes "early"
+            // sleep for ...ms and then try get result ?
+            // BUT loss time if it finishes "early"
             println!("Finished waiting");
             let result = child.stdout.take(); //FIXME: release ?
             let is_late_or_incorrect = match result {
@@ -88,7 +88,7 @@ fn test_create_process_in_cgroup() {
             };
             if is_late_or_incorrect {
                 println!("Attenpting to kill process");
-                //kill
+                // kill
                 group.kill().unwrap_or_else(|e| {
                         println!("Could not kill process. Must wait 10s to let it \"die by itself\", to avoid error in cgroup.delete(). Error: {e}");
                         std::thread::sleep(Duration::from_secs(10));
@@ -96,7 +96,7 @@ fn test_create_process_in_cgroup() {
                 wait_for_process_cleanup(&group, pid, Duration::from_millis(100))
                     .unwrap_or_else(|e| println!("Process cleanup did not end well: {e}"));
             } else {
-                //release (auto ?)
+                // release (auto ?)
             }
         }
     } else {

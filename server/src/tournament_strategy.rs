@@ -10,14 +10,14 @@ pub trait TournamentStrategy {
     fn players_per_match(&self) -> usize;
 }
 
-pub struct SwissStrategy {
+pub struct SwissTournament {
     agents: Vec<Arc<Agent>>,
     round: usize,
     max_rounds: usize,
     pending: Vec<Vec<Arc<Agent>>>,
 }
 
-impl SwissStrategy {
+impl SwissTournament {
     pub fn new(agents: Vec<Arc<Agent>>, max_rounds: usize) -> Self {
         Self {
             agents,
@@ -28,7 +28,7 @@ impl SwissStrategy {
     }
 }
 
-impl TournamentStrategy for SwissStrategy {
+impl TournamentStrategy for SwissTournament {
     fn advance_round(&mut self, scores: &Scores) {
         if self.round >= self.max_rounds {
             return;
@@ -67,12 +67,12 @@ impl TournamentStrategy for SwissStrategy {
     }
 }
 
-pub struct RoundRobinStrategy {
+pub struct RoundRobinTournament {
     pending: Vec<Vec<Arc<Agent>>>,
 }
 
-impl RoundRobinStrategy {
-    /// symmetric means (A VS B) should give the same result as (B VS A)
+impl RoundRobinTournament {
+    /// symmetric means `A VS B` should give the same result as `B VS A`
     pub fn new(agents: Vec<Arc<Agent>>, symmetric: bool) -> Self {
         let n = agents.len();
         let mut pending = vec![];
@@ -88,7 +88,7 @@ impl RoundRobinStrategy {
     }
 }
 
-impl TournamentStrategy for RoundRobinStrategy {
+impl TournamentStrategy for RoundRobinTournament {
     fn advance_round(&mut self, _scores: &Scores) {}
 
     fn get_pending_tuples(&mut self) -> Vec<Vec<Arc<Agent>>> {
@@ -103,11 +103,11 @@ impl TournamentStrategy for RoundRobinStrategy {
     }
 }
 
-pub struct SingleplayerTournamentStrategy {
+pub struct SingleplayerTournament {
     pending: Vec<Vec<Arc<Agent>>>,
 }
 
-impl SingleplayerTournamentStrategy {
+impl SingleplayerTournament {
     /// game_per_agent 
     pub fn new(agents: Vec<Arc<Agent>>, game_per_agent : usize) -> Self {
         let mut pending = vec![];
@@ -118,7 +118,7 @@ impl SingleplayerTournamentStrategy {
     }
 }
 
-impl TournamentStrategy for SingleplayerTournamentStrategy {
+impl TournamentStrategy for SingleplayerTournament {
     fn advance_round(&mut self, _scores: &Scores) {}
 
     fn get_pending_tuples(&mut self) -> Vec<Vec<Arc<Agent>>> {

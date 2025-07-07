@@ -127,9 +127,9 @@ impl LimitedProcess {
         max_memory: i64,
         cpus: &str,
     ) -> anyhow::Result<LimitedProcess> {
-        static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);//lazy cell ? (if multiple evaluations at the same time !)
+        static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);// lazy cell ? (if multiple evaluations at the same time !)
         let user_id = get_current_user_id().context("could not get user id")?;
-        //generate a new cgroup name for each Limited Process
+        // generate a new cgroup name for each Limited Process
         let group_name = COUNTER
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
             .to_string();

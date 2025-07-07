@@ -12,7 +12,7 @@ pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
         .unwrap()
         .filter_map(|res| res.ok())
         .fold(0, |acu, entry| acu.max(entry.file_name().len()))
-        + 3; //at least 3 dots
+        + 3; // at least 3 dots
     
     println!("Compiling agents...");
 

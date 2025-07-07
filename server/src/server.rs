@@ -2,7 +2,7 @@ use crate::agent_compiler;
 use crate::constraints::Constraints;
 use crate::match_runner::run_match;
 use crate::tournament::{Scores, TournamentScheduler};
-use crate::tournament_strategy::SwissStrategy;
+use crate::tournament_strategy::SwissTournament;
 
 use agent_interface::{Game, GameFactory};
 use anyhow::anyhow;
@@ -51,7 +51,7 @@ where
 
         // 3. create an tournament of some sort (depending of game_type) for remaining ones
         let max_rounds = 4; /* ceil(log2(num_players)) ? */
-        let strategy = SwissStrategy::new(agents, max_rounds);
+        let strategy = SwissTournament::new(agents, max_rounds);
         let mut tournament = TournamentScheduler::new(self.params.clone(),strategy);
 
         let (tx_result, rx_result) = mpsc::channel();
