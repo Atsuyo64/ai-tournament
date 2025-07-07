@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr, sync::Arc, time::Duration};
+use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc, time::Duration};
 
 // use crate::{
 //     client_handler::ClientHandler, tournament_maker::MatchSettings,
@@ -95,14 +95,14 @@ use std::{fmt::Display, str::FromStr, sync::Arc, time::Duration};
 //             clients[current_player_number] = Err(anyhow!("stopped"));
 //         }
 //     }
-    
+
 //     clients.iter_mut().enumerate().for_each(|(i,c)| {
 //         if let Ok(c) = c {
 //             c.kill_child().unwrap();
 //             on_resource_free.send(agents_resources[i].clone()).unwrap();
 //         }
 //     });
-    
+
 //     let scores = (0..num_players as u32).map(|i| game.get_player_score(i)).collect::<Vec<_>>();
 //     //TODO: update scores
 //     //TODO: on_score_update
@@ -123,10 +123,10 @@ use std::{fmt::Display, str::FromStr, sync::Arc, time::Duration};
 //     }
 // }
 
-
 use agent_interface::Game;
+use tracing::{instrument, trace, warn};
 
-use crate::{agent::Agent, constraints::Constraints};
+use crate::{agent::Agent, client_handler::ClientHandler, constraints::Constraints};
 
 #[derive(Debug, Clone)]
 pub struct MatchSettings {
@@ -152,22 +152,127 @@ impl Display for MatchSettings {
 
 #[derive(Debug, Clone)]
 pub struct MatchResult {
-    pub results:Vec<(Arc<Agent>,f32)>,
-    pub resources: Constraints,
+    pub results: Vec<(Arc<Agent>, f32)>,
+    pub resources_freed: Constraints,
     // pub duration: Duration,
 }
 
-pub fn run_match<G:Game>(settings: MatchSettings,mut _game:G) -> MatchResult
+#[instrument(skip_all,fields(VS=settings.to_string()))]
+pub fn run_match<G: Game>(settings: MatchSettings, mut game: G) -> MatchResult
 where
     G::Action: FromStr,
     G::State: ToString,
 {
-    //FIXME: that is very much a placeholder. Please don't try this at home
-    std::thread::sleep(Duration::from_millis(100));
+    trace!("game started");
+    let MatchSettings {
+        ordered_player,
+        resources,
+    } = settings;
+    // let num_players = ordered_player.len();
+    let max_turn_duration = resources.action_time;
+    const MAX_BUFFER_SIZE: usize = 4096;
 
-    // Random winner for now
+    let mut clients: HashMap<usize, ClientHandler> = HashMap::new();
+    // Start client processes
+    {
+        let num_cpus = resources.cpus_per_agent;
+        let ram = resources.agent_ram;
+        let mut avail_res = resources.clone();
+        for (i, agent) in ordered_player.iter().enumerate() {
+            match ClientHandler::init(agent.clone(), &avail_res.take(num_cpus, ram)) {
+                Ok(client) => {
+                    clients.insert(i, client);
+                }
+                Err(e) => {
+                    warn!("Failed to start client for agent {}: {}", agent.name, e);
+                }
+            }
+        }
+    }
+
+    // Init clocks (time budget)
+    let mut time_budgets = vec![resources.time_budget; ordered_player.len()];
+
+    game.init();
+
+    while !game.is_finished() && clients.len() > 0 {
+        let current = game.get_current_player_number();
+        let time_budget = time_budgets[current];
+        let chrono_start = std::time::Instant::now();
+
+        // If player is missing, action is none
+        let action = if let Some(client) = clients.get_mut(&current) {
+            let state_str = game.get_state().to_string();
+            let mut buf = [0; MAX_BUFFER_SIZE];
+            let max_duration = Duration::min(max_turn_duration, time_budget);
+            match client.send_and_recv(state_str.as_bytes(), &mut buf, max_duration) {
+                Ok(received) => {
+                    let response = std::str::from_utf8(&buf[..received]);
+                    match response {
+                        Ok(text) => match G::Action::from_str(text.trim()) {
+                            Ok(action) => Some(action),
+                            Err(_) => {
+                                warn!(
+                                    "Agent {} sent invalid action: {}",
+                                    ordered_player[current].name, text
+                                );
+                                client.kill_child_process().unwrap();
+                                clients.remove(&current);
+                                None
+                            }
+                        },
+                        Err(_) => {
+                            warn!(
+                                "Agent {} sent non-UTF8 response",
+                                ordered_player[current].name
+                            );
+                            client.kill_child_process().unwrap();
+                            clients.remove(&current);
+                            None
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!(
+                        "Agent {} did not respond in time: {}",
+                        ordered_player[current].name, e
+                    );
+                    client.kill_child_process().unwrap();
+                    clients.remove(&current);
+                    None
+                }
+            }
+        } else {
+            // Agent was already eliminated/killed/did not start
+            None
+        };
+
+        let elapsed = chrono_start.elapsed();
+        time_budgets[current] -= elapsed;
+
+        // Apply action (even if it's None, Game is suppposed to handle elimination logic)
+        if let Err(_) = game.apply_action(&action) {
+            if action.is_some() { //CHECK: print anyway ?
+                warn!("player {} 's action rejected by Game", current);
+            }
+        }
+    }
+
+    // Kill remaining processes
+    for client in clients.values_mut() {
+        client.kill_child_process().unwrap();
+    }
+
+    // Collect final scores
+    let mut results = vec![];
+    for (i, agent) in ordered_player.iter().enumerate() {
+        let score = game.get_player_score(i as u32);
+        results.push((agent.clone(), score));
+    }
+
+    trace!("match end");
     MatchResult {
-        results: vec![(settings.ordered_player[0].clone(),1.0),(settings.ordered_player[1].clone(),0.0),],
-        resources: settings.resources,
+        results,
+        resources_freed: resources,
     }
 }

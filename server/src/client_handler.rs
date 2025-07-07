@@ -30,7 +30,7 @@ impl ClientHandler {
         trace!("launching client at {path:?}");
         
         //TODO: apply resource limitations
-        let child = process::Command::new(path)
+        let mut child = process::Command::new(path)
             .arg(port_arg)
             .stdout(process::Stdio::piped())
             .spawn()
@@ -42,9 +42,13 @@ impl ClientHandler {
             .set_nonblocking(true)
             .context("setting non-blocking to true")?;
 
-        let (stream, _addr) = listener.accept().context("accepting connection")?;
-
-        Ok(ClientHandler { stream , child })
+        if let Ok((stream, _addr)) = listener.accept() {
+            Ok(ClientHandler { stream , child })
+        } else {
+            child.kill().unwrap();
+            child.wait().unwrap();
+            Err(anyhow!("error accepting connection"))
+        }
     }
 
     pub fn send_and_recv(&mut self, msg: &[u8],buf: &mut[u8], max_duration: Duration) -> anyhow::Result<usize> {
@@ -73,7 +77,7 @@ impl ClientHandler {
         Ok(n)
     }
     
-    pub fn kill_child(&mut self) -> anyhow::Result<()> {
+    pub fn kill_child_process(&mut self) -> anyhow::Result<()> {
         self.child.kill().context("killing child")?;
         self.child.wait().map(|_|()).context("waiting for cleanup")
     }

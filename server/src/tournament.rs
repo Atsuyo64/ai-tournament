@@ -64,7 +64,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
 
         let cpu_per_match = self.resources.cpus_per_agent * self.strategy.players_per_match();
         let ram_per_match =
-            self.resources.agent_ram.unwrap_or(0) * self.strategy.players_per_match();
+            self.resources.agent_ram * self.strategy.players_per_match();
         // Schedule as many pending matches as long as there is enough resources
         let mut remaining = vec![];
         for v in self.pending_matches.drain(..) {
@@ -84,7 +84,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
 
     pub fn on_result(&mut self, result: MatchResult) -> Vec<MatchSettings> {
         self.scores.add_score(result.results);
-        self.resources.add(result.resources);
+        self.resources.add(result.resources_freed);
         self.running_matches -= 1;
         self.tick()
     }

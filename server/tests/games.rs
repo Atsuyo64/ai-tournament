@@ -59,6 +59,7 @@ impl GameFactory<DummyGame> for DummyFactory {
     }
 }
 
+// Unused
 pub struct DummyAgent;
 
 impl Agent<DummyGame> for DummyAgent {

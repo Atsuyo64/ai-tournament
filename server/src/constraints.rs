@@ -223,7 +223,7 @@ impl ConstraintsBuilder {
             );
         }
 
-        let agent_ram = self.agent_ram;
+        let agent_ram = self.agent_ram.unwrap_or(0);
         let cpus = match self.cpus {
             AutoCpus::Auto => {
                 sys.refresh_cpu_all();
@@ -236,8 +236,8 @@ impl ConstraintsBuilder {
             }
         };
         let cpus_per_agent = self.cpus_per_agent.unwrap_or(1);
-        let time_budget = self.time_budget;
-        let action_time = self.action_time;
+        let time_budget = self.time_budget.unwrap_or(Duration::MAX);
+        let action_time = self.action_time.unwrap_or(Duration::MAX);
 
         Ok(Constraints {
             total_ram,
@@ -294,11 +294,11 @@ fn cpu_list_to_hashset(s: &str) -> anyhow::Result<HashSet<u8>> {
 #[derive(Clone, Debug)]
 pub struct Constraints {
     pub(crate) total_ram: usize,
-    pub(crate) agent_ram: Option<usize>,
+    pub(crate) agent_ram: usize,
     pub(crate) cpus: HashSet<u8>,
     pub(crate) cpus_per_agent: usize,
-    pub(crate) time_budget: Option<Duration>,
-    pub(crate) action_time: Option<Duration>,
+    pub(crate) time_budget: Duration,
+    pub(crate) action_time: Duration,
 }
 
 impl Constraints {
@@ -338,17 +338,17 @@ impl Constraints {
         self.cpus.take(&cpu).unwrap()
     }
 
-    pub(crate) fn with_cpus_and_ram<I: IntoIterator<Item = u8>>(
-        cpus: I,
-        ram: usize,
-    ) -> Constraints {
-        Constraints {
-            total_ram: ram,
-            agent_ram: None,
-            cpus: cpus.into_iter().collect(),
-            cpus_per_agent: 1,
-            time_budget: None,
-            action_time: None,
-        }
-    }
+    // pub(crate) fn with_cpus_and_ram<I: IntoIterator<Item = u8>>(
+    //     cpus: I,
+    //     ram: usize,
+    // ) -> Constraints {
+    //     Constraints {
+    //         total_ram: ram,
+    //         agent_ram: 0,
+    //         cpus: cpus.into_iter().collect(),
+    //         cpus_per_agent: 1,
+    //         time_budget: Duration::MAX,
+    //         action_time: Duration::MAX,
+    //     }
+    // }
 }
