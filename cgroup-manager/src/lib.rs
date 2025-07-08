@@ -85,14 +85,14 @@ pub fn wait_for_process_cleanup(
 
 pub fn create_process_in_cgroup(
     command: &str,
-    args: &Vec<&str>,
+    args: &[String],
     group: &cgroups_rs::Cgroup,
 ) -> anyhow::Result<std::process::Child> {
     let mut child = std::process::Command::new(command)
         .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn()
         .with_context(|| format!("command '{command}' not found"))?;
 
@@ -114,6 +114,7 @@ pub fn create_process_in_cgroup(
     Ok(child)
 }
 
+#[derive(Debug)]
 pub struct LimitedProcess {
     pub child: Child,
     cgroup: Cgroup,
@@ -123,7 +124,7 @@ pub struct LimitedProcess {
 impl LimitedProcess {
     pub fn launch(
         command: &str,
-        args: &Vec<&str>,
+        args: &[String],
         max_memory: i64,
         cpus: &str,
     ) -> anyhow::Result<LimitedProcess> {

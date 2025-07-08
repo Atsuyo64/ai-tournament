@@ -54,7 +54,7 @@ where
         let (tx_match, rx_match) = mpsc::channel();
 
         // 5. start match dispatcher (block waiting on match)
-        let factory: F = self.factory.clone();
+        let factory: F = self.factory.clone(); //TODO: clean thread at the end
         std::thread::spawn(move || {
             for match_settings in rx_match {
                 let new_game = factory.new_game();

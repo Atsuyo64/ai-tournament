@@ -1,20 +1,20 @@
 - [x] Prototype with dummy game
-- [x] Proof of concept (priority) (tic tac toe ? rock paper scissors ?)
+- [x] Proof of concept (priority) (tic tac toe? rock paper scissors?)
 - [x] find a better way to configure/deal with restrictions
 - [x] add logs to matches
 - [x] separate scheduler logic from tournament logic
 - [ ] implement bye logic
-- [ ] apply restrictions to agents
+- [x] apply restrictions to agents
 - [ ] collects scores
 - [ ] create lots of agents with strange behavior
 - [ ] format final scores
 - [ ] design config file for agents (2 parts : tested agent config<u>s</u> for students + "main" config for evaluation (server-side))
 - [ ] parse config file (first: main config only)
-- [ ] init agent with arguments (clap) data (where to get argument data ?)
+- [ ] init agent with arguments (clap) data (where to get argument data?)
 - [x] read about differents tournaments systems
-- [ ] implement smarter tournaments systems REVIEW: continuous evaluation ? periodic reset ?
+- [ ] implement smarter tournaments systems REVIEW: continuous evaluation? periodic reset?
 - [x] tournament iterator should check constraints
-- [ ] Doc: Write somewhere that threads/multiprocess are not possible for agents !
+- [ ] Doc: Write somewhere that threads/multiprocess are not possible for agents!
 - [ ] Mesure communication delay
 - [ ] Using a DB (csv) to avoid running same matches (with same agents) again (using binary hash + conf)
 - [ ] Check if agents can overflow their piped IO-Buffers
