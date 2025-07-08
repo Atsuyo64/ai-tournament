@@ -28,7 +28,7 @@ fn init_logger() {
 fn launch_dummy() {
     init_logger();
 
-    let params = ConstraintsBuilder::new().with_time_budget(Duration::from_secs(10)).build().unwrap();
+    let params = ConstraintsBuilder::new().with_time_budget(Duration::from_secs(10)).with_total_cpu_count(2).build().unwrap();
     let evaluator = Evaluator::new(DummyFactory {}, params);
     let path = std::env::current_dir().unwrap().join("tests/dummy_agents");
     let tournament = SingleplayerTournament::new(3);
