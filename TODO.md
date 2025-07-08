@@ -1,7 +1,7 @@
 - [x] Prototype with dummy game
 - [x] Proof of concept (priority) (tic tac toe ? rock paper scissors ?)
 - [x] find a better way to configure/deal with restrictions
-- [ ] add logs to matches
+- [x] add logs to matches
 - [x] separate scheduler logic from tournament logic
 - [ ] implement bye logic
 - [ ] apply restrictions to agents
@@ -13,7 +13,7 @@
 - [ ] init agent with arguments (clap) data (where to get argument data ?)
 - [x] read about differents tournaments systems
 - [ ] implement smarter tournaments systems REVIEW: continuous evaluation ? periodic reset ?
-- [ ] tournament iterator should check constraints
+- [x] tournament iterator should check constraints
 - [ ] Doc: Write somewhere that threads/multiprocess are not possible for agents !
 - [ ] Mesure communication delay
 - [ ] Using a DB (csv) to avoid running same matches (with same agents) again (using binary hash + conf)
