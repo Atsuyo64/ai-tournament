@@ -54,8 +54,8 @@ where
         let (tx_match, rx_match) = mpsc::channel();
 
         // 5. start match dispatcher (block waiting on match)
-        let factory: F = self.factory.clone(); //TODO: clean thread at the end
-        std::thread::spawn(move || {
+        let factory: F = self.factory.clone();
+        let match_dispatcher = std::thread::spawn(move || {
             for match_settings in rx_match {
                 let new_game = factory.new_game();
                 let tx_result = tx_result.clone();
@@ -78,6 +78,9 @@ where
                 tx_match.send(m).unwrap();
             }
         }
+
+        drop(tx_match); // should end match dispatcher
+        match_dispatcher.join().unwrap();
 
         Ok(scheduler.final_scores())
     }
