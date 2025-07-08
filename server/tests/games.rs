@@ -50,6 +50,7 @@ impl Game for DummyGame {
     }
 }
 
+#[derive(Clone)]
 pub struct DummyFactory {}
 
 impl GameFactory<DummyGame> for DummyFactory {
@@ -58,6 +59,7 @@ impl GameFactory<DummyGame> for DummyFactory {
     }
 }
 
+// Unused
 pub struct DummyAgent;
 
 impl Agent<DummyGame> for DummyAgent {
@@ -97,7 +99,7 @@ impl RpsAction {
         }
 
         // if !at_least_two {
-        //     //only one type
+        //     // only one type
         //     if contains_rock {
         //         return Some(Self::Rock);
         //     } else if contains_paper {
@@ -157,6 +159,7 @@ impl Display for RpsAction {
     }
 }
 
+#[derive(Clone)]
 pub struct RockPaperScissors {
     num_players: usize,
     scores: Vec<i32>,
@@ -191,6 +194,7 @@ impl RockPaperScissors {
     }
 }
 
+#[derive(Clone)]
 pub struct RPSWrapper {
     rps: RockPaperScissors,
     actions_buffer: Vec<Option<RpsAction>>,
@@ -199,6 +203,7 @@ pub struct RPSWrapper {
     state: RpsState,
 }
 
+#[derive(Clone)]
 pub struct RpsState {
     pub previous_actions: Vec<Option<RpsAction>>,
 }

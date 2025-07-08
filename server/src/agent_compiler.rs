@@ -12,8 +12,8 @@ pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
         .unwrap()
         .filter_map(|res| res.ok())
         .fold(0, |acu, entry| acu.max(entry.file_name().len()))
-        + 3; //at least 3 dots
-    
+        + 3; // at least 3 dots
+
     println!("Compiling agents...");
 
     for subdir in std::fs::read_dir(directory).unwrap() {
@@ -74,7 +74,7 @@ pub fn compile_single_agent(dir: &DirEntry) -> Result<PathBuf, String> {
                 .unwrap()
                 .trim()
                 .split("\n")
-                .nth(0)
+                .next()
                 .unwrap_or_default(),
             // std::str::from_utf8(&ouput.stdout).unwrap().trim(),
         ))

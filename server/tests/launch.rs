@@ -1,6 +1,7 @@
 use crate::games::{DummyFactory, RPSWrapper};
+use server::tournament_strategy::{SingleplayerTournament, SwissTournament};
 use ::server::{constraints::ConstraintsBuilder, server::Evaluator};
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 use tracing::Level;
 
 mod games;
@@ -19,7 +20,7 @@ fn init_logger() {
 
     let _ = tracing_subscriber::fmt()
         .event_format(format)
-        .with_max_level(Level::INFO)
+        .with_max_level(Level::TRACE)
         .try_init();
 }
 
@@ -27,22 +28,24 @@ fn init_logger() {
 fn launch_dummy() {
     init_logger();
 
-    let params = ConstraintsBuilder::new().build().unwrap();
+    let params = ConstraintsBuilder::new().with_time_budget(Duration::from_secs(10)).build().unwrap();
     let evaluator = Evaluator::new(DummyFactory {}, params);
     let path = std::env::current_dir().unwrap().join("tests/dummy_agents");
-    let _ = evaluator.evaluate(path.as_path()).unwrap();
+    let tournament = SingleplayerTournament::new(3);
+    let _ = evaluator.evaluate(path.as_path(),tournament).unwrap();
 }
 
 #[test]
 fn launch_rock_paper_scissors() {
     init_logger();
 
-    let params = ConstraintsBuilder::new().build().unwrap();
+    let params = ConstraintsBuilder::new().with_time_budget(Duration::from_secs(10)).build().unwrap();
     let evaluator = Evaluator::new(RPSWrapper::default(), params);
     let path = std::env::current_dir()
         .unwrap()
         .join("tests/rock_paper_scissors_agents");
-    let _ = evaluator.evaluate(path.as_path()).unwrap();
+    let tournament = SwissTournament::new(0);
+    let _ = evaluator.evaluate(path.as_path(),tournament).unwrap();
 }
 
 #[test]

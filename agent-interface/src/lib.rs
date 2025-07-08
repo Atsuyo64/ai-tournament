@@ -34,7 +34,7 @@ pub trait Game {
 pub trait Agent<G: Game> {
     fn init(&mut self);
 
-    //State == String ? (codingame-like)
+    // State == String ? (codingame-like)
     //NOTE: deadline : if using VM, make sure clocks are synch (or use Duration)
     fn select_action(&mut self, state: G::State, deadline: Instant) -> Option<G::Action>;
 }
