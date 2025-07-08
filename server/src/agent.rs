@@ -2,12 +2,12 @@
 
 use std::path::PathBuf;
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Agent {
     pub name: String,
     pub compile: bool,
     pub path_to_exe: Option<PathBuf>,
-    pub scores: Vec<f32>,
+    // pub scores: Vec<f32>,
 }
 
 impl Agent {
@@ -16,7 +16,7 @@ impl Agent {
             name,
             compile: path_to_exe.is_some(),
             path_to_exe,
-            scores: vec![],
+            // scores: vec![],
         }
     }
 }

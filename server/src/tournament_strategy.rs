@@ -43,6 +43,7 @@ impl TournamentStrategy for SwissTournament {
         let mut sorted = self.agents.clone();
         sorted.sort_by_key(|agent| std::cmp::Reverse(scores.get_key(agent)));
 
+        //FIXME: prevent already-played match pairing
         // Pair per score
         self.pending = sorted
             .chunks(2)

@@ -32,7 +32,8 @@ fn launch_dummy() {
     let evaluator = Evaluator::new(DummyFactory {}, params);
     let path = std::env::current_dir().unwrap().join("tests/dummy_agents");
     let tournament = SingleplayerTournament::new(3);
-    let _ = evaluator.evaluate(path.as_path(),tournament).unwrap();
+    let scores = evaluator.evaluate(path.as_path(),tournament).unwrap();
+    dbg!(scores);
 }
 
 #[test]
