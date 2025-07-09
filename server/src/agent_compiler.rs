@@ -15,7 +15,7 @@ pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
         + 3; // at least 3 dots
 
     println!("Compiling agents...");
-
+    let mut ids = 1;
     for subdir in std::fs::read_dir(directory).unwrap() {
         let Ok(subdir) = subdir else {
             continue;
@@ -32,11 +32,12 @@ pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
         let res = compile_single_agent(&subdir);
         if let Ok(res) = res {
             println!("{GREEN}Ok{RESET}");
-            vec.push(Arc::new(Agent::new(name, Some(res))));
+            vec.push(Arc::new(Agent::new(name, Some(res),ids)));
         } else {
             println!("{RED}{}{RESET}", res.unwrap_err());
-            vec.push(Arc::new(Agent::new(name, None)));
+            vec.push(Arc::new(Agent::new(name, None,ids)));
         }
+        ids += 1;
     }
     vec
 }
