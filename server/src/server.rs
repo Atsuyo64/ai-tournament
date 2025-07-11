@@ -1,11 +1,12 @@
 use crate::agent_compiler;
 use crate::constraints::Constraints;
 use crate::match_runner::run_match;
-use crate::tournament::{Scores, TournamentScheduler};
+use crate::tournament::TournamentScheduler;
 use crate::tournament_strategy::TournamentStrategy;
 
 pub use agent_interface::{Game, GameFactory};
 use anyhow::bail;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::mpsc;
 
@@ -36,7 +37,14 @@ where
         }
     }
 
-    pub fn evaluate<T:TournamentStrategy>(&self, directory: &std::path::Path, mut tournament: T) -> anyhow::Result<Scores> {
+    pub fn evaluate<T: TournamentStrategy>(
+        &self,
+        directory: &std::path::Path,
+        mut tournament: T,
+    ) -> anyhow::Result<HashMap<String, T::FinalScore>>
+    where
+        T::FinalScore: 'static,
+    {
         // 1. get agents name & code in *directory*
         if !directory.is_dir() {
             bail!("{directory:?} is not a directory");
@@ -82,6 +90,12 @@ where
         drop(tx_match); // should end match dispatcher
         match_dispatcher.join().unwrap();
 
-        Ok(scheduler.final_scores())
+        let mapped_score = scheduler
+            .final_scores()
+            .into_iter()
+            .map(|(agent, score)| (agent.name.clone(), score))
+            .collect::<HashMap<_,_>>();
+
+        Ok(mapped_score)
     }
 }

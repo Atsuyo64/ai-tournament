@@ -27,15 +27,17 @@ impl Display for MatchSettings {
     }
 }
 
+pub type MatchResult = Vec<(Arc<Agent>,f32)>;
+
 #[derive(Debug, Clone)]
-pub struct MatchResult {
-    pub results: Vec<(Arc<Agent>, f32)>,
+pub struct RunnerResult {
+    pub results: MatchResult,
     pub resources_freed: Constraints,
     // pub duration: Duration,
 }
 
 #[instrument(skip_all,fields(VS=settings.to_string()))]
-pub fn run_match<G: Game>(settings: MatchSettings, mut game: G) -> MatchResult
+pub fn run_match<G: Game>(settings: MatchSettings, mut game: G) -> RunnerResult
 where
     G::Action: FromStr,
     G::State: ToString,
@@ -72,10 +74,10 @@ where
 
     game.init();
 
-    while !game.is_finished() && !clients.is_empty() {
+    while !game.is_finished() && !clients.is_empty() { //FIXME: if client is empty from the start (does not compile)
         let current = game.get_current_player_number();
         let time_budget = time_budgets[current];
-        let chrono_start = std::time::Instant::now();
+        let timer_start = std::time::Instant::now();
 
         // If player is missing, action is none
         let action = if let Some(client) = clients.get_mut(&current) {
@@ -124,12 +126,13 @@ where
             None
         };
 
-        let elapsed = chrono_start.elapsed();
+        let elapsed = timer_start.elapsed();
         time_budgets[current] -= elapsed;
 
-        // Apply action (even if it's None, Game is suppposed to handle elimination logic)
+        // Apply action (even if it's None, Game is supposed to handle elimination logic)
         // Only warn when a non-None action is rejected
         if game.apply_action(&action).is_err() && action.is_some() {
+            //FIXME: kill process ? / remove client ?
             warn!("player {}'s action rejected by Game", current);
         }
     }
@@ -147,7 +150,7 @@ where
     }
 
     trace!("match end");
-    MatchResult {
+    RunnerResult {
         results,
         resources_freed: resources,
     }

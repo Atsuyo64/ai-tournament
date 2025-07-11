@@ -10,6 +10,7 @@ use agent_interface::*;
 
 pub struct DummyGame {
     counter: u32,
+    got_none: bool,
 }
 
 impl Game for DummyGame {
@@ -20,6 +21,7 @@ impl Game for DummyGame {
     fn init(&mut self) {}
 
     fn apply_action(&mut self, _action: &Option<Self::Action>) -> Result<(), ()> {
+        self.got_none |= _action.is_none();
         Ok(())
     }
 
@@ -42,7 +44,7 @@ impl Game for DummyGame {
     }
 
     fn get_player_score(&self, _player_number: u32) -> f32 {
-        1.0
+        if self.got_none { 0.0 } else { 1.0 }
     }
 
     fn get_current_player_number(&self) -> usize {
@@ -55,7 +57,7 @@ pub struct DummyFactory {}
 
 impl GameFactory<DummyGame> for DummyFactory {
     fn new_game(&self) -> DummyGame {
-        DummyGame { counter: 10 }
+        DummyGame { counter: 10, got_none: false }
     }
 }
 
@@ -166,7 +168,7 @@ pub struct RockPaperScissors {
 }
 
 impl RockPaperScissors {
-    const SCORE_TO_WIN: i32 = 10;
+    pub const SCORE_TO_WIN: i32 = 10;
 
     pub fn new(num_players: usize) -> Self {
         RockPaperScissors {
@@ -264,7 +266,7 @@ impl FromStr for PlayerState {
                 player_number: lines[0]
                     .parse()
                     .map_err(|_| format!("not a usize: '{}'", lines[0]))?,
-                state: RpsState::from_str("").map_err(|_| format!("not a Rpsstate: '{}'", ""))?,
+                state: RpsState::from_str("").map_err(|_| format!("not a RpsState: '{}'", ""))?,
             })
         } else if lines.len() == 2 {
             let player_number = lines[0]
@@ -359,6 +361,12 @@ impl Game for RPSWrapper {
 
     fn get_player_score(&self, player_number: u32) -> f32 {
         self.rps.scores[player_number as usize] as f32
+        //FIXME: should possibly re-think the whole tournament score system...
+        // if self.rps.scores[player_number as usize] == RockPaperScissors::SCORE_TO_WIN {
+        //     1.0
+        // } else {
+        //     0.0
+        // }
     }
 }
 
