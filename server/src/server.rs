@@ -4,7 +4,7 @@ use crate::match_runner::run_match;
 use crate::tournament::TournamentScheduler;
 use crate::tournament_strategy::TournamentStrategy;
 
-pub use agent_interface::{Game, GameFactory};
+pub use agent_interface::{Game, GameFactory, game_info::GameInfo};
 use anyhow::bail;
 use std::collections::HashMap;
 use std::str::FromStr;
