@@ -170,7 +170,7 @@ impl ConstraintsBuilder {
         }
     }
 
-    //NOTE: alt names: cumulative timout, cumulative time limit, per agent time limit, total time limit
+    //NOTE: alt names: cumulative timeout, cumulative time limit, per agent time limit, total time limit
     /// Sets the total allowed clock-time for an agent across the entire game.
     ///
     /// This acts as a time budget. If exceeded, the agent is considered out of time.

@@ -95,7 +95,7 @@ impl ClientHandler {
 
         self.stream
             .set_read_timeout(Some(max_duration))
-            .context("setting read timout")?;
+            .context("setting read timeout")?;
 
         let n = self
             .stream

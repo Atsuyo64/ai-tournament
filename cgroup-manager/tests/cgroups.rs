@@ -25,7 +25,7 @@ fn launch_something() {
 
 #[test]
 fn test_create_cgroup() {
-    //NOTE: futur work: implement the Windows equivalent: "Job Object"
+    //NOTE: future work: implement the Windows equivalent: "Job Object"
     assert_eq!(
         std::env::consts::OS,
         "linux",
@@ -52,7 +52,6 @@ fn test_create_cgroup() {
     let my_group = create_cgroup(&new_group_path, 1024 * 1024, 3, "1-3,5")
         .expect("Could not create cgroup...");
     println!("path: {}", my_group.path());
-    // my_group.apply(todo!()).expect("Failed to apply ressouce limit.");
 
     my_group.delete().expect("Could not delete cgroup")
 }
@@ -75,7 +74,7 @@ fn test_create_process_in_cgroup() {
             // sleep for ...ms and then try get result ?
             // BUT loss time if it finishes "early"
             println!("Finished waiting");
-            let result = child.stdout.take(); //FIXME: release ?
+            let result = child.stdout.take();
             let is_late_or_incorrect = match result {
                 Some(_answer) => {
                     println!("The process responded on time and the response is acceptable");
@@ -87,7 +86,7 @@ fn test_create_process_in_cgroup() {
                 }
             };
             if is_late_or_incorrect {
-                println!("Attenpting to kill process");
+                println!("Attempting to kill process");
                 // kill
                 group.kill().unwrap_or_else(|e| {
                         println!("Could not kill process. Must wait 10s to let it \"die by itself\", to avoid error in cgroup.delete(). Error: {e}");
@@ -105,7 +104,7 @@ fn test_create_process_in_cgroup() {
     }
     println!("Deleting cgroup.");
     group.delete().unwrap_or_else(|e| {
-        println!("Could not delete cgroup ! Is there any decendant left ? ({e})");
+        println!("Could not delete cgroup ! Is there any descendant left ? ({e})");
         let procs = group.tasks();
         println!("PIDS: {:?}", procs);
     });

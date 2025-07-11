@@ -63,21 +63,21 @@ pub fn compile_single_agent(dir: &DirEntry) -> Result<PathBuf, String> {
         .spawn()
         .expect("could not launch command 'cargo'");
 
-    let ouput = proc.wait_with_output().expect("failed to wait on child");
-    if ouput.status.success() {
+    let output = proc.wait_with_output().expect("failed to wait on child");
+    if output.status.success() {
         let path = dir.path().join("target/release/").join(BIN_NAME);
         Ok(path)
     } else {
         Err(format!(
             "Compilation error: {}",
-            // ouput.status.code().unwrap(),
-            std::str::from_utf8(&ouput.stderr)
+            // output.status.code().unwrap(),
+            std::str::from_utf8(&output.stderr)
                 .unwrap()
                 .trim()
                 .split("\n")
                 .next()
                 .unwrap_or_default(),
-            // std::str::from_utf8(&ouput.stdout).unwrap().trim(),
+            // std::str::from_utf8(&output.stdout).unwrap().trim(),
         ))
     }
 }

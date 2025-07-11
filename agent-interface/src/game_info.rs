@@ -24,5 +24,5 @@ pub struct GameInfo {
     pub deterministicness : Deterministicness,
     pub sequentialness : Sequentialness,
     pub information : Information,
-    // symetric ? (AgentA > AgentB </=> AgentB < AgentA)
+    // symmetric ? (AgentA > AgentB </=> AgentB < AgentA)
 }
