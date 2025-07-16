@@ -95,7 +95,6 @@ where
                                     "Agent {} sent invalid action: '{}' (len = {received})",
                                     ordered_player[current].name, text
                                 );
-                                client.kill_child_process().unwrap();
                                 clients.remove(&current);
                                 None
                             }
@@ -105,7 +104,6 @@ where
                                 "Agent {} sent non-UTF8 response",
                                 ordered_player[current].name
                             );
-                            client.kill_child_process().unwrap();
                             clients.remove(&current);
                             None
                         }
@@ -116,7 +114,6 @@ where
                         "Agent {} did not respond in time: {}",
                         ordered_player[current].name, e
                     );
-                    client.kill_child_process().unwrap();
                     clients.remove(&current);
                     None
                 }
@@ -132,15 +129,12 @@ where
         // Apply action (even if it's None, Game is supposed to handle elimination logic)
         // Only warn when a non-None action is rejected
         if game.apply_action(&action).is_err() && action.is_some() {
-            //FIXME: kill process ? / remove client ?
             warn!("player {}'s action rejected by Game", current);
+            clients.remove(&current);
         }
     }
-
     // Kill remaining processes
-    for client in clients.values_mut() {
-        client.kill_child_process().unwrap();
-    }
+    drop(clients);
 
     // Collect final scores
     let mut results = vec![];

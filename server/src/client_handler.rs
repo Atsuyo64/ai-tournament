@@ -20,6 +20,9 @@ pub struct ClientHandler {
 impl ClientHandler {
     const RESPONSE_TIMEOUT_DURATION : Duration = Duration::from_secs(1);
 
+    /// launch a child process running agent with given constraints.
+    /// 
+    /// Child process is killed on drop. Child process's cgroup is cleaned up on drop.
     #[instrument(skip_all,fields(Agent=agent.name))]
     pub fn init(agent: Arc<Agent>, resources: &Constraints) -> anyhow::Result<ClientHandler> {
         assert_eq!(resources.total_ram, resources.agent_ram, "incorrect ram to launch agent");
@@ -107,7 +110,13 @@ impl ClientHandler {
         Ok(n)
     }
 
-    pub fn kill_child_process(&mut self) -> anyhow::Result<()> {
+    fn kill_child_process(&mut self) -> anyhow::Result<()> {
         self.process.try_kill(Duration::from_secs(1))
+    }
+}
+
+impl Drop for ClientHandler {
+    fn drop(&mut self) {
+        self.kill_child_process().expect("could not kill child process");
     }
 }
