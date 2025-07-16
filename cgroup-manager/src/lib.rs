@@ -61,7 +61,7 @@ pub struct TimeoutError {}
 
 impl std::fmt::Display for TimeoutError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Timout Error")
+        write!(f, "Timeout Error")
     }
 }
 
@@ -131,12 +131,12 @@ impl LimitedProcess {
         static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);// lazy cell ? (if multiple evaluations at the same time !)
         let user_id = get_current_user_id().context("could not get user id")?;
         // generate a new cgroup name for each Limited Process
-        let group_name = COUNTER
+        let group_name = "CGROUP_MANAGER_".to_owned() + &COUNTER
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
             .to_string();
         let path = get_cgroup_path(&user_id, &group_name);
         let group =
-            create_cgroup(&path, max_memory, 10, cpus).context("could not create cgroup")?;
+            create_cgroup(&path, max_memory, 100, cpus).context("could not create cgroup")?;
         let child = create_process_in_cgroup(command, args, &group).with_context(|| {
             let _ = group.delete();
             "could not create process in cgroup"
