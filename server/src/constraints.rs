@@ -209,13 +209,13 @@ impl ConstraintsBuilder {
             bail!("Cannot limit total RAM without limiting agent RAM.");
         }
 
-        let total_ram = self.total_ram.unwrap_or_else(|| {
+        let total_ram = self.total_ram.map(|i|i*1_000_000).unwrap_or_else(|| {
             sys.refresh_memory();
             //REVIEW: sys.total_memory() ?
-            (sys.available_memory() / 1_000_000) as usize
+            sys.available_memory() as usize
         });
 
-        if total_ram < self.agent_ram.unwrap_or(0) {
+        if total_ram < (self.agent_ram.unwrap_or(0) * 1_000_000){
             bail!(
                 "Agent RAM size ({}MB) is greater than total RAM ({}MB)",
                 self.agent_ram.unwrap(),
@@ -223,7 +223,7 @@ impl ConstraintsBuilder {
             );
         }
 
-        let agent_ram = self.agent_ram.unwrap_or(0);
+        let agent_ram = self.agent_ram.unwrap_or(0) * 1_000_000;
         let cpus = match self.cpus {
             AutoCpus::Auto => {
                 sys.refresh_cpu_all();
