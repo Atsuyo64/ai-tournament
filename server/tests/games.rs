@@ -361,12 +361,6 @@ impl Game for RPSWrapper {
 
     fn get_player_score(&self, player_number: u32) -> f32 {
         self.rps.scores[player_number as usize] as f32
-        //FIXME: should possibly re-think the whole tournament score system...
-        // if self.rps.scores[player_number as usize] == RockPaperScissors::SCORE_TO_WIN {
-        //     1.0
-        // } else {
-        //     0.0
-        // }
     }
 }
 
