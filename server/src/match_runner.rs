@@ -74,7 +74,7 @@ where
 
     game.init();
 
-    while !game.is_finished() && !clients.is_empty() { //FIXME: if client is empty from the start (does not compile)
+    while !game.is_finished() && !clients.is_empty() { //FIXME: if client is empty from the start (e.g. client does not compile)
         let current = game.get_current_player_number();
         let time_budget = time_budgets[current];
         let timer_start = std::time::Instant::now();
@@ -92,7 +92,7 @@ where
                             Ok(action) => Some(action),
                             Err(_) => {
                                 warn!(
-                                    "Agent {} sent invalid action: {}",
+                                    "Agent {} sent invalid action: '{}' (len = {received})",
                                     ordered_player[current].name, text
                                 );
                                 client.kill_child_process().unwrap();
@@ -127,7 +127,7 @@ where
         };
 
         let elapsed = timer_start.elapsed();
-        time_budgets[current] -= elapsed;
+        time_budgets[current]= time_budgets[current].checked_sub(elapsed).unwrap_or(Duration::ZERO);
 
         // Apply action (even if it's None, Game is supposed to handle elimination logic)
         // Only warn when a non-None action is rejected
