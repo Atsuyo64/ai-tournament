@@ -205,17 +205,13 @@ impl ConstraintsBuilder {
     pub fn build(self) -> anyhow::Result<Constraints> {
         let mut sys = sysinfo::System::new();
 
-        if self.total_ram.is_some() && self.agent_ram.is_none() {
-            bail!("Cannot limit total RAM without limiting agent RAM.");
-        }
-
-        let total_ram = self.total_ram.map(|i|i*1_000_000).unwrap_or_else(|| {
+        let total_ram = self.total_ram.map(|i| i * 1_000_000).unwrap_or_else(|| {
             sys.refresh_memory();
             //REVIEW: sys.total_memory() ?
             sys.available_memory() as usize
         });
 
-        if total_ram < (self.agent_ram.unwrap_or(0) * 1_000_000){
+        if total_ram < (self.agent_ram.unwrap_or(0) * 1_000_000) {
             bail!(
                 "Agent RAM size ({}MB) is greater than total RAM ({}MB)",
                 self.agent_ram.unwrap(),
@@ -223,7 +219,6 @@ impl ConstraintsBuilder {
             );
         }
 
-        let agent_ram = self.agent_ram.unwrap_or(0) * 1_000_000;
         let cpus = match self.cpus {
             AutoCpus::Auto => {
                 sys.refresh_cpu_all();
@@ -236,6 +231,9 @@ impl ConstraintsBuilder {
             }
         };
         let cpus_per_agent = self.cpus_per_agent.unwrap_or(1);
+        let agent_ram = self.agent_ram.map(|i| i * 1_000_000).unwrap_or_else(||{
+            total_ram / (cpus.len() / cpus_per_agent)
+        });
         let time_budget = self.time_budget.unwrap_or(Duration::MAX);
         let action_time = self.action_time.unwrap_or(Duration::MAX);
 
