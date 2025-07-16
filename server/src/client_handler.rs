@@ -22,6 +22,9 @@ impl ClientHandler {
 
     #[instrument(skip_all,fields(Agent=agent.name))]
     pub fn init(agent: Arc<Agent>, resources: &Constraints) -> anyhow::Result<ClientHandler> {
+        assert_eq!(resources.total_ram, resources.agent_ram, "incorrect ram to launch agent");
+        assert_eq!(resources.cpus.len(), resources.cpus_per_agent,"incorrect cpus to launch agents");
+
         // return early if agent has no binary
         let path = agent.path_to_exe.clone().context("agent path is None")?.into_os_string().into_string().unwrap();
         
