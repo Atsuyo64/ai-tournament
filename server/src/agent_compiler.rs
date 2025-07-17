@@ -1,4 +1,4 @@
-use std::{fs::DirEntry, path::PathBuf, sync::Arc};
+use std::{fs::DirEntry, io::Write, path::PathBuf, sync::Arc};
 
 use crate::agent::Agent;
 
@@ -23,6 +23,7 @@ pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
         let name = subdir.file_name().into_string().unwrap();
 
         print!("Compiling {name:·<longest_name$} ");
+        let _ = std::io::stdout().flush(); // try to flush stdout
 
         if subdir.metadata().unwrap().is_file() {
             println!("{RED}Not a directory{RESET}");
