@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Context};
 use cgroup_manager::LimitedProcess;
-use tracing::{error, instrument, trace};
+use tracing::{error, instrument};
 
 use crate::agent::Agent;
 use crate::constraints::Constraints;
@@ -34,7 +34,7 @@ impl ClientHandler {
         let listener = TcpListener::bind("127.0.0.1:0").context("listener creation")?;
         let port_arg = listener.local_addr()?.port().to_string();
 
-        trace!("launching client");
+        // trace!("launching client");
 
         let cpus = resources
             .cpus

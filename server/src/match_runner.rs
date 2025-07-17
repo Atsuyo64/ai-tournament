@@ -39,7 +39,7 @@ pub struct RunnerResult {
 #[instrument(skip_all,fields(VS=settings.to_string()))]
 pub fn run_match<G: Game>(settings: MatchSettings, mut game: G) -> RunnerResult
 where
-    G::Action: FromStr,
+    G::Action: FromStr + ToString,
     G::State: ToString,
 {
     trace!("game started");
@@ -109,10 +109,10 @@ where
                         }
                     }
                 }
-                Err(e) => {
+                Err(_e) => {
                     warn!(
-                        "Agent {} did not respond in time: {}",
-                        ordered_player[current].name, e
+                        "Agent {} did not respond in time",
+                        ordered_player[current].name
                     );
                     clients.remove(&current);
                     None
@@ -129,7 +129,7 @@ where
         // Apply action (even if it's None, Game is supposed to handle elimination logic)
         // Only warn when a non-None action is rejected
         if game.apply_action(&action).is_err() && action.is_some() {
-            warn!("player {}'s action rejected by Game", current);
+            warn!("player {}'s action ({}) rejected by Game", current, action.unwrap().to_string());
             clients.remove(&current);
         }
     }
