@@ -18,3 +18,4 @@
 - [ ] Measure communication delay
 - [ ] Using a DB (csv) to avoid running same matches (with same agents) again (using binary hash + conf)
 - [x] Check if agents can overflow their piped IO-Buffers
+- [ ] Agent Launcher "trait" => either exe or object
