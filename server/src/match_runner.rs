@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc, time::Duration};
 
 use agent_interface::Game;
-use tracing::{instrument, trace, warn};
+use tracing::{info, instrument, trace, warn};
 
 use crate::{agent::Agent, client_handler::ClientHandler, constraints::Constraints};
 
@@ -16,23 +16,20 @@ impl Display for MatchSettings {
         let s = self
             .ordered_player
             .iter()
-            .fold(String::new(), |acu, agent| {
-                if acu.is_empty() {
-                    acu + &agent.name
-                } else {
-                    acu + " VS " + &agent.name
-                }
-            });
+            .map(|a| &a.name[..])
+            .collect::<Vec<_>>()
+            .join(" VS ");
         write!(f, "[{s}]")
     }
 }
 
-pub type MatchResult = Vec<(Arc<Agent>,f32)>;
+pub type MatchResult = Vec<(Arc<Agent>, f32)>;
 
 #[derive(Debug, Clone)]
 pub struct RunnerResult {
     pub results: MatchResult,
     pub resources_freed: Constraints,
+    pub errors: String,
     // pub duration: Duration,
 }
 
@@ -47,6 +44,7 @@ where
         ordered_player,
         resources,
     } = settings;
+    let mut errors_string = String::new();
 
     let max_turn_duration = resources.action_time;
     const MAX_BUFFER_SIZE: usize = 4096;
@@ -63,7 +61,8 @@ where
                     clients.insert(i, client);
                 }
                 Err(e) => {
-                    warn!("Failed to start client for agent {}: {}", agent.name, e);
+                    errors_string += &format!("{} startup failed ({}), ", agent.name, e);
+                    info!("Failed to start client for agent {}: {}", agent.name, e);
                 }
             }
         }
@@ -74,7 +73,8 @@ where
 
     game.init();
 
-    while !game.is_finished() && !clients.is_empty() { //FIXME: if client is empty from the start (e.g. client does not compile)
+    while !game.is_finished() && !clients.is_empty() {
+        //FIXME: if client is empty from the start (e.g. client does not compile)
         let current = game.get_current_player_number();
         let time_budget = time_budgets[current];
         let timer_start = std::time::Instant::now();
@@ -91,8 +91,12 @@ where
                         Ok(text) => match G::Action::from_str(text.trim()) {
                             Ok(action) => Some(action),
                             Err(_) => {
-                                warn!(
+                                info!(
                                     "Agent {} sent invalid action: '{}' (len = {received})",
+                                    ordered_player[current].name, text
+                                );
+                                errors_string += &format!(
+                                    "{} not an action: '{}', ",
                                     ordered_player[current].name, text
                                 );
                                 clients.remove(&current);
@@ -100,20 +104,29 @@ where
                             }
                         },
                         Err(_) => {
-                            warn!(
+                            info!(
                                 "Agent {} sent non-UTF8 response",
                                 ordered_player[current].name
                             );
+                            errors_string +=
+                                &format!("{} non-utf8 response, ", ordered_player[current].name);
                             clients.remove(&current);
                             None
                         }
                     }
                 }
                 Err(_e) => {
-                    warn!(
+                    info!(
                         "Agent {} did not respond in time",
                         ordered_player[current].name
                     );
+                    // timeout is silenced when duration is small (time budget exceeded is normal behaviour (must happen))
+                    if max_duration >= resources.action_time
+                        || max_duration >= (resources.time_budget / 10)
+                    {
+                        errors_string +=
+                            &format!("{}: response timeout, ", ordered_player[current].name);
+                    }
                     clients.remove(&current);
                     None
                 }
@@ -124,12 +137,23 @@ where
         };
 
         let elapsed = timer_start.elapsed();
-        time_budgets[current]= time_budgets[current].checked_sub(elapsed).unwrap_or(Duration::ZERO);
+        time_budgets[current] = time_budgets[current]
+            .checked_sub(elapsed)
+            .unwrap_or(Duration::ZERO);
 
         // Apply action (even if it's None, Game is supposed to handle elimination logic)
         // Only warn when a non-None action is rejected
         if game.apply_action(&action).is_err() && action.is_some() {
-            warn!("player {}'s action ({}) rejected by Game", current, action.unwrap().to_string());
+            info!(
+                "player {}'s action ({}) rejected by Game",
+                current,
+                action.as_ref().unwrap().to_string()
+            );
+            errors_string += &format!(
+                "{}'s action '{}' was rejected: {{reason}}, ",
+                ordered_player[current].name,
+                action.unwrap().to_string()
+            );
             clients.remove(&current);
         }
     }
@@ -147,5 +171,6 @@ where
     RunnerResult {
         results,
         resources_freed: resources,
+        errors: errors_string,
     }
 }
