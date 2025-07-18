@@ -1,10 +1,18 @@
 use crate::games::{DummyFactory, RPSWrapper};
 use server::tournament_strategy::{SinglePlayerTournament, SwissTournament};
 use ::server::{constraints::ConstraintsBuilder, server::Evaluator};
+use tracing_subscriber::{fmt, layer::{Context, Filter, SubscriberExt}, Layer, Registry};
 use std::{str::FromStr, time::Duration};
-use tracing::Level;
+use tracing::{Level, Metadata};
 
 mod games;
+
+struct CustomLevelFilter;
+impl<S> Filter<S> for CustomLevelFilter {
+fn enabled(&self,meta: &Metadata<'_>,_cx: &Context<'_,S>) -> bool {
+        meta.level() == &Level::DEBUG
+    }
+}
 
 fn init_logger() {
     let format = tracing_subscriber::fmt::format()
@@ -18,10 +26,11 @@ fn init_logger() {
         .with_target(false)
     ;
 
-    let _ = tracing_subscriber::fmt()
-        .event_format(format)
-        .with_max_level(Level::TRACE)
-        .try_init();
+    let reg = Registry::default().with(
+        fmt::layer().event_format(format).with_filter(CustomLevelFilter)
+    );
+
+    let _ = tracing::subscriber::set_global_default(reg);
 }
 
 #[test]
