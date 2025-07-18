@@ -10,7 +10,7 @@ impl Game for DummyGame {
 
     fn init(&mut self) {}
 
-    fn apply_action(&mut self, _action: &Option<()>) -> Result<(), ()> {
+    fn apply_action(&mut self, _action: &Option<()>) -> anyhow::Result<()> {
         Ok(())
     }
 

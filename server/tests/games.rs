@@ -20,7 +20,7 @@ impl Game for DummyGame {
 
     fn init(&mut self) {}
 
-    fn apply_action(&mut self, _action: &Option<Self::Action>) -> Result<(), ()> {
+    fn apply_action(&mut self, _action: &Option<Self::Action>) -> anyhow::Result<()> {
         self.got_none |= _action.is_none();
         Ok(())
     }
@@ -312,7 +312,7 @@ impl Game for RPSWrapper {
         *self = RPSWrapper::default();
     }
 
-    fn apply_action(&mut self, action: &Option<Self::Action>) -> Result<(), ()> {
+    fn apply_action(&mut self, action: &Option<Self::Action>) -> anyhow::Result<()> {
         self.actions_buffer.push(*action);
         self.current_player += 1;
         if self.current_player == self.rps.num_players {
@@ -327,7 +327,7 @@ impl Game for RPSWrapper {
             self.actions_buffer = vec![];
         }
         if action.is_none() {
-            Err(())
+            Err(anyhow::anyhow!("action is None"))
         } else {
             Ok(())
         }
