@@ -61,8 +61,8 @@ where
                     clients.insert(i, client);
                 }
                 Err(e) => {
-                    errors_string += &format!("{} startup failed ({}), ", agent.name, e);
-                    info!("Failed to start client for agent {}: {}", agent.name, e);
+                    errors_string += &format!("{} startup failed ({e}), ", agent.name);
+                    info!("Failed to start client for agent {}: {e}", agent.name);
                 }
             }
         }
@@ -92,12 +92,12 @@ where
                             Ok(action) => Some(action),
                             Err(_) => {
                                 info!(
-                                    "Agent {} sent invalid action: '{}' (len = {received})",
-                                    ordered_player[current].name, text
+                                    "Agent {} sent invalid action: '{text}' (len = {received})",
+                                    ordered_player[current].name
                                 );
                                 errors_string += &format!(
-                                    "{} not an action: '{}', ",
-                                    ordered_player[current].name, text
+                                    "{} not an action: '{text}', ",
+                                    ordered_player[current].name
                                 );
                                 clients.remove(&current);
                                 None
@@ -143,18 +143,19 @@ where
 
         // Apply action (even if it's None, Game is supposed to handle elimination logic)
         // Only warn when a non-None action is rejected
-        if game.apply_action(&action).is_err() && action.is_some() {
-            info!(
-                "player {}'s action ({}) rejected by Game",
-                current,
-                action.as_ref().unwrap().to_string()
-            );
-            errors_string += &format!(
-                "{}'s action '{}' was rejected: \x1b[3m{{reason}}\x1b[23m, ",
-                ordered_player[current].name,
-                action.unwrap().to_string()
-            );
-            clients.remove(&current);
+        if let Err(e) = game.apply_action(&action) {
+            if action.is_some() {
+                info!(
+                    "player {current}'s action ({}) rejected by Game",
+                    action.as_ref().unwrap().to_string()
+                );
+                errors_string += &format!(
+                    "{}'s action '{}' was rejected: {e}, ",
+                    ordered_player[current].name,
+                    action.unwrap().to_string()
+                );
+                clients.remove(&current);
+            }
         }
     }
     // Kill remaining processes
