@@ -25,7 +25,7 @@ enum AutoCpus {
 ///
 /// ```
 /// # use std::time::Duration;
-/// # use server::available_resources::ConstraintsBuilder;
+/// # use server::constraints::ConstraintsBuilder;
 ///
 /// let constraints = ConstraintsBuilder::new()
 ///     .with_max_total_ram(16_000)
@@ -231,9 +231,10 @@ impl ConstraintsBuilder {
             }
         };
         let cpus_per_agent = self.cpus_per_agent.unwrap_or(1);
-        let agent_ram = self.agent_ram.map(|i| i * 1_000_000).unwrap_or_else(||{
-            total_ram / (cpus.len() / cpus_per_agent)
-        });
+        let agent_ram = self
+            .agent_ram
+            .map(|i| i * 1_000_000)
+            .unwrap_or_else(|| total_ram / (cpus.len() / cpus_per_agent));
         let time_budget = self.time_budget.unwrap_or(Duration::MAX);
         let action_time = self.action_time.unwrap_or(Duration::MAX);
 
