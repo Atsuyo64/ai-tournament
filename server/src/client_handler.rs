@@ -29,9 +29,9 @@ impl ClientHandler {
         assert_eq!(resources.cpus.len(), resources.cpus_per_agent,"incorrect cpus to launch agents");
 
         // return early if agent has no binary
-        let path = agent.path_to_exe.clone().context("agent path is None")?.into_os_string().into_string().unwrap();
+        let path = agent.path_to_exe.clone().context("no path to executable")?.into_os_string().into_string().unwrap();
         
-        let listener = TcpListener::bind("127.0.0.1:0").context("listener creation")?;
+        let listener = TcpListener::bind("127.0.0.1:0").context("server error: could not create TcpListener")?;
         let port_arg = listener.local_addr()?.port().to_string();
 
         // trace!("launching client");
@@ -47,11 +47,11 @@ impl ClientHandler {
         let args = full_command.collect::<Vec<_>>();
         let max_memory = resources.total_ram;
 
-        let mut process = LimitedProcess::launch(&command, &args, max_memory as i64, &cpus).context("child + cgroup creation")?;
+        let mut process = LimitedProcess::launch(&command, &args, max_memory as i64, &cpus).context("server error: child + cgroup creation failed")?;
 
         listener
             .set_nonblocking(true)
-            .context("setting non-blocking to true")?;
+            .context("server error: setting non-blocking to true")?;
         
         let response_timeout = Instant::now() + Self::RESPONSE_TIMEOUT_DURATION;
         while Instant::now() < response_timeout {
@@ -62,7 +62,7 @@ impl ClientHandler {
         }
         
         process.try_kill(Duration::from_secs(1)).unwrap();
-        Err(anyhow!("error accepting connection"))
+        Err(anyhow!("no connection made to server"))
     }
 
     #[instrument]
@@ -74,7 +74,7 @@ impl ClientHandler {
     ) -> anyhow::Result<usize> {
         self.stream
             .set_nonblocking(true)
-            .context("setting non-blocking for 'write'")?;
+            .context("server error: setting non-blocking for 'write'")?;
 
         match self.stream.write(msg) {
             Ok(0) => {
@@ -88,20 +88,20 @@ impl ClientHandler {
                         msg.len(),
                         std::str::from_utf8(msg).unwrap()
                     );
-                    return Err(anyhow!("only {}/{} bytes were sent", n, msg.len()));
+                    return Err(anyhow!("msg transmission error: only {}/{} bytes sent", n, msg.len()));
                 }
             }
             Err(e) => {
-                return Err(e).context("writing msg");
+                return Err(e).context("I/O error while sending msg");
             }
         }
         self.stream
             .set_nonblocking(false)
-            .context("setting blocking for 'read'")?;
+            .context("server error: setting blocking for 'read'")?;
 
         self.stream
             .set_read_timeout(Some(max_duration))
-            .context("setting read timeout")?;
+            .context("server error: setting read timeout")?;
 
         let n = self
             .stream
