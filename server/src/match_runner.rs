@@ -150,7 +150,7 @@ where
                 action.as_ref().unwrap().to_string()
             );
             errors_string += &format!(
-                "{}'s action '{}' was rejected: {{reason}}, ",
+                "{}'s action '{}' was rejected: \x1b[3m{{reason}}\x1b[23m, ",
                 ordered_player[current].name,
                 action.unwrap().to_string()
             );
