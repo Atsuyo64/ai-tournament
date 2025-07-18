@@ -215,7 +215,7 @@ impl ConstraintsBuilder {
             bail!(
                 "Agent RAM size ({}MB) is greater than total RAM ({}MB)",
                 self.agent_ram.unwrap(),
-                total_ram
+                total_ram / 1_000_000
             );
         }
 
