@@ -90,9 +90,6 @@ where
             .map(|(agent, score)| (agent.name.clone(), score))
             .collect::<HashMap<_, _>>();
 
-        // Dirty fix to unhide the cursor at the end
-        print!("\x1b[?25h");
-
         Ok(mapped_score)
     }
 }
@@ -112,6 +109,9 @@ fn match_dispatcher<F, G>(
     // only for printing purpose
     let running_matches = Arc::new(Mutex::new(Vec::<String>::new()));
 
+    // hide cursor + disable line wrapping
+    print!("\x1b[?25l\x1b[?7l");
+
     for match_settings in rx_match {
         let string = match_settings.to_string();
         let new_game = factory.new_game();
@@ -124,6 +124,9 @@ fn match_dispatcher<F, G>(
             tx_result.send(result).unwrap();
         });
     }
+
+    // unhide the cursor at the end + re-unable line wrapping
+    print!("\x1b[?25h\x1b[?7h");
 
     fn add_match(match_string: &String, running_matches: &Mutex<Vec<String>>) {
         let mut running = running_matches.lock().expect("mutex poisoning");
@@ -156,8 +159,8 @@ fn match_dispatcher<F, G>(
         );
     }
     fn print_running_matches(running: &Vec<String>) {
-        // hide cursor, clear, green, default, start of line
-        print!("\x1b[?25l\x1b[2K\x1b[32mRunning...:\x1b[39m {}\x1b[0G", running.join(", "));
+        // clear, green, default, start of line
+        print!("\x1b[2K\x1b[32mRunning...:\x1b[39m {}\x1b[0G", running.join(", "));
         let _ = std::io::stdout().flush();
     }
 }
