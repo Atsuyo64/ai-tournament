@@ -28,6 +28,7 @@ impl ClientHandler {
         assert_eq!(resources.total_ram, resources.agent_ram, "incorrect ram to launch agent");
         assert_eq!(resources.cpus.len(), resources.cpus_per_agent,"incorrect cpus to launch agents");
 
+        //FIXME: panic
         // return early if agent has no binary
         let path = agent.path_to_exe.clone().context("no path to executable")?.into_os_string().into_string().unwrap();
         
@@ -61,6 +62,7 @@ impl ClientHandler {
             thread::sleep(Duration::from_millis(10).min(Self::RESPONSE_TIMEOUT_DURATION/10)); // at least 10 tries
         }
         
+        //FIXME: panic
         process.try_kill(Duration::from_secs(1)).unwrap();
         Err(anyhow!("no connection made to server"))
     }
@@ -82,6 +84,7 @@ impl ClientHandler {
             }
             Ok(n) => {
                 if n < msg.len() {
+                    //FIXME: panic
                     error!(
                         "only {}/{} bytes of {} were sent",
                         n,
@@ -117,6 +120,7 @@ impl ClientHandler {
 
 impl Drop for ClientHandler {
     fn drop(&mut self) {
+        //FIXME: panic
         self.kill_child_process().expect("could not kill child process");
     }
 }
