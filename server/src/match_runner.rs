@@ -74,17 +74,25 @@ where
     game.init();
 
     while !game.is_finished() && !clients.is_empty() {
-        //FIXME: if client is empty from the start (e.g. client does not compile)
         let current = game.get_current_player_number();
-        let time_budget = time_budgets[current];
-        let timer_start = std::time::Instant::now();
 
         // If player is missing, action is none
         let action = if let Some(client) = clients.get_mut(&current) {
             let state_str = game.get_state().to_string();
             let mut buf = [0; MAX_BUFFER_SIZE];
+
+            let time_budget = time_budgets[current];
             let max_duration = Duration::min(max_turn_duration, time_budget);
-            match client.send_and_recv(state_str.as_bytes(), &mut buf, max_duration) {
+            let timer_start = std::time::Instant::now();
+
+            let response = client.send_and_recv(state_str.as_bytes(), &mut buf, max_duration);
+
+            let elapsed = timer_start.elapsed();
+            time_budgets[current] = time_budgets[current]
+                .checked_sub(elapsed)
+                .unwrap_or(Duration::ZERO);
+
+            match response {
                 Ok(received) => {
                     let response = std::str::from_utf8(&buf[..received]);
                     match response {
@@ -135,11 +143,6 @@ where
             // Agent was already eliminated/killed/did not start
             None
         };
-
-        let elapsed = timer_start.elapsed();
-        time_budgets[current] = time_budgets[current]
-            .checked_sub(elapsed)
-            .unwrap_or(Duration::ZERO);
 
         // Apply action (even if it's None, Game is supposed to handle elimination logic)
         // Only warn when a non-None action is rejected
