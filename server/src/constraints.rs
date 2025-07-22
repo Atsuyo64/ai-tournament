@@ -219,10 +219,12 @@ impl ConstraintsBuilder {
             );
         }
 
+        // By default, we use the physical CPU count because using all logical CPUs 
+        // cuts agent performance in half (at least on the machine I tested).
         let cpus = match self.cpus {
             AutoCpus::Auto => {
                 sys.refresh_cpu_all();
-                let num_cpus = sys.cpus().len() as u8;
+                let num_cpus = num_cpus::get_physical() as u8;
                 (0..num_cpus).collect::<HashSet<u8>>()
             }
             AutoCpus::Count(num_cpus) => (0..(num_cpus as u8)).collect::<HashSet<u8>>(),
