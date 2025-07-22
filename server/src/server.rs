@@ -47,6 +47,14 @@ where
     where
         T::FinalScore: 'static,
     {
+        // 0. setup panic hook to exit on panic (would not exit on thread panic)
+        let orig_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |panic_info| {
+            // invoke the default handler and exit the process
+            orig_hook(panic_info);
+            std::process::exit(1);
+        }));
+
         // 1. get agents name & code in *directory*
         if !directory.is_dir() {
             bail!("{directory:?} is not a directory");

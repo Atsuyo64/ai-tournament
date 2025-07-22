@@ -212,10 +212,9 @@ impl ConstraintsBuilder {
         });
 
         if total_ram < (self.agent_ram.unwrap_or(0) * 1_000_000) {
-            //FIXME: panic
             bail!(
                 "Agent RAM size ({}MB) is greater than total RAM ({}MB)",
-                self.agent_ram.unwrap(),
+                self.agent_ram.unwrap_or(0),
                 total_ram / 1_000_000
             );
         }
