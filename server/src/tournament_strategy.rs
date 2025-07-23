@@ -254,14 +254,20 @@ impl TournamentStrategy for RoundRobinTournament {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Debug, Clone, Default)]
+#[derive(PartialEq, Debug, Clone, Default)]
 pub struct SinglePlayerScore(pub Vec<f32>);
 
 impl Eq for SinglePlayerScore {} // That's it ??
 
+impl PartialOrd for SinglePlayerScore {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Ord for SinglePlayerScore {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.partial_cmp(other).unwrap()
+        self.0.partial_cmp(&other.0).unwrap()
     }
 }
 

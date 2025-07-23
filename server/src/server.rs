@@ -125,10 +125,10 @@ fn match_dispatcher<F, G>(
         let new_game = factory.new_game();
         let tx_result = tx_result.clone();
         let c_mutex = running_matches.clone();
-        add_match(&string, &*running_matches);
+        add_match(&string, &running_matches);
         std::thread::spawn(move || {
             let result = run_match(match_settings, new_game);
-            remove_match(&string, &*c_mutex, &result);
+            remove_match(&string, &c_mutex, &result);
             tx_result.send(result).unwrap();
         });
     }
@@ -136,9 +136,9 @@ fn match_dispatcher<F, G>(
     // unhide the cursor at the end + re-unable line wrapping
     print!("\x1b[?25h\x1b[?7h");
 
-    fn add_match(match_string: &String, running_matches: &Mutex<Vec<String>>) {
+    fn add_match(match_string: &str, running_matches: &Mutex<Vec<String>>) {
         let mut running = running_matches.lock().expect("mutex poisoning");
-        running.push(match_string.clone());
+        running.push(match_string.to_owned());
         print_running_matches(&running);
     }
 
@@ -153,7 +153,7 @@ fn match_dispatcher<F, G>(
             .position(|s| *s == *match_string)
             .expect("running match not found");
         running.remove(pos);
-        print_runner_result(&match_string, &result);
+        print_runner_result(match_string, result);
         print_running_matches(&running);
     }
     fn print_runner_result(match_string: &String, result: &RunnerResult) {
@@ -178,7 +178,7 @@ fn match_dispatcher<F, G>(
             match_string, ordered_scores, result.errors
         );
     }
-    fn print_running_matches(running: &Vec<String>) {
+    fn print_running_matches(running: &[String]) {
         // clear, green, default, start of line
         print!(
             "\x1b[2K\x1b[32mRunning...:\x1b[39m {}\x1b[0G",
