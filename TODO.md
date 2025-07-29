@@ -8,14 +8,21 @@
 - [x] collect scores
 - [x] collect scores nicely
 - [ ] create lots of agents with strange behaviour
-- [ ] format final scores
+- [x] format final scores
 - [ ] design config file for agents (2 parts : tested agent config<u>s</u> for students + "main" config for evaluation (server-side))
 - [ ] parse config file (first: main config only)
 - [ ] init agent with arguments (clap) data (where to get argument data?)
 - [x] read about different tournaments systems
 - [ ] implement smarter tournaments systems REVIEW: continuous evaluation? periodic reset?
 - [x] tournament iterator should check constraints
-- [ ] Measure communication delay
+- [x] Measure communication delay
 - [ ] Using a DB (csv) to avoid running same matches (with same agents) again (using binary hash + conf)
 - [x] Check if agents can overflow their piped IO-Buffers
 - [ ] Agent Launcher "trait" => either exe or object
+- [ ] Update Game trait
+- [ ] option to disable print/ANSI
+- [ ] swiss option: 'match-per-confrontation'
+- [ ] swiss prevent playing against same adversary
+- [ ] swiss prevent double bye
+- [ ] merging interface and cgroup manager into server
+- [ ] renaming server
