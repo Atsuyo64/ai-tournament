@@ -27,6 +27,12 @@ pub struct TwoPlayersGameScore {
     pub tie_breaker: u32,
 }
 
+impl std::fmt::Display for TwoPlayersGameScore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f,"win: {}, draw: {}, loose: {}, tie-breaker: {}",self.num_win,self.num_draw,self.num_lose,self.tie_breaker)
+    }
+}
+
 pub struct SwissTournament {
     agents: Vec<Arc<Agent>>,
     round: usize,
