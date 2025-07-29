@@ -72,8 +72,10 @@ where
     let mut time_budgets = vec![resources.time_budget; ordered_player.len()];
 
     game.init();
+    let mut turn = 0;
 
     while !game.is_finished() && !clients.is_empty() {
+        turn += 1;
         let current = game.get_current_player_number();
 
         // If player is missing, action is none
@@ -103,10 +105,17 @@ where
                                     "Agent {} sent invalid action: '{text}' (len = {received})",
                                     ordered_player[current].name
                                 );
-                                errors_string += &format!(
-                                    "{} not an action: '{text}', ",
-                                    ordered_player[current].name
-                                );
+                                if received == 0 {
+                                    errors_string += &format!(
+                                        "{} empty string received (player probably crashed), ",
+                                        ordered_player[current].name
+                                    );
+                                } else {
+                                    errors_string += &format!(
+                                        "{} not an action: '{text}', ",
+                                        ordered_player[current].name
+                                    );
+                                }
                                 clients.remove(&current);
                                 None
                             }
@@ -125,15 +134,19 @@ where
                 }
                 Err(_e) => {
                     info!(
-                        "Agent {} did not respond in time",
-                        ordered_player[current].name
+                        "Agent {} did not respond in time ({}ms)",
+                        ordered_player[current].name,
+                        max_duration.as_millis()
                     );
                     // timeout is silenced when duration is small (time budget exceeded is normal behaviour (must happen))
                     if max_duration >= resources.action_time
                         || max_duration >= (resources.time_budget / 10)
                     {
-                        errors_string +=
-                            &format!("{}: response timeout, ", ordered_player[current].name);
+                        errors_string += &format!(
+                            "{}: {_e} response timeout ({}ms) (turn {turn}), ",
+                            ordered_player[current].name,
+                            max_duration.as_millis()
+                        );
                     }
                     clients.remove(&current);
                     None
