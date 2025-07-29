@@ -29,7 +29,11 @@ pub struct TwoPlayersGameScore {
 
 impl std::fmt::Display for TwoPlayersGameScore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"win: {}, draw: {}, loose: {}, tie-breaker: {}",self.num_win,self.num_draw,self.num_lose,self.tie_breaker)
+        write!(
+            f,
+            "win: {}, draw: {}, loose: {}, tie-breaker: {}",
+            self.num_win, self.num_draw, self.num_lose, self.tie_breaker
+        )
     }
 }
 
@@ -304,7 +308,8 @@ impl TournamentStrategy for SinglePlayerTournament {
 
         // the first and only round
         let mut pending = vec![];
-        for agent in self.agents.drain(..) { // drain so that no more matches are returned after first round
+        for agent in self.agents.drain(..) {
+            // drain so that no more matches are returned after first round
             pending.append(&mut vec![vec![agent.clone()]; self.game_per_agent]);
         }
         pending

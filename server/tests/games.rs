@@ -2,14 +2,10 @@ use std::fmt::Display;
 use std::str::FromStr;
 use std::vec;
 
-use agent_interface::game_info::Deterministicness::*;
-use agent_interface::game_info::GameInfo;
-use agent_interface::game_info::Information::*;
-use agent_interface::game_info::Sequentialness::*;
 use agent_interface::*;
 
 pub struct DummyGame {
-    counter: u32,
+    counter: std::cell::RefCell<u32>,
     got_none: bool,
 }
 
@@ -18,33 +14,26 @@ impl Game for DummyGame {
 
     type Action = u32;
 
-    fn init(&mut self) {}
-
     fn apply_action(&mut self, _action: &Option<Self::Action>) -> anyhow::Result<()> {
         self.got_none |= _action.is_none();
         Ok(())
     }
 
-    fn get_state(&mut self) -> Self::State {
-        self.counter -= 1;
-        self.counter
+    fn get_state(&self) -> Self::State {
+        *self.counter.borrow_mut() -= 1;
+        *self.counter.borrow()
     }
 
     fn is_finished(&self) -> bool {
-        self.counter <= 0
-    }
-
-    fn get_game_info(&self) -> game_info::GameInfo {
-        GameInfo {
-            num_player: 1,
-            deterministicness: Deterministic,
-            sequentialness: Sequential,
-            information: PerfectInformation,
-        }
+        *self.counter.borrow() <= 0
     }
 
     fn get_player_score(&self, _player_number: u32) -> f32 {
-        if self.got_none { 0.0 } else { 1.0 }
+        if self.got_none {
+            0.0
+        } else {
+            1.0
+        }
     }
 
     fn get_current_player_number(&self) -> usize {
@@ -57,7 +46,10 @@ pub struct DummyFactory {}
 
 impl GameFactory<DummyGame> for DummyFactory {
     fn new_game(&self) -> DummyGame {
-        DummyGame { counter: 10, got_none: false }
+        DummyGame {
+            counter: std::cell::RefCell::new(10),
+            got_none: false,
+        }
     }
 }
 
@@ -70,9 +62,9 @@ impl Agent<DummyGame> for DummyAgent {
     fn select_action(
         &mut self,
         state: <DummyGame as Game>::State,
-        _deadline: std::time::Instant,
-    ) -> Option<<DummyGame as Game>::Action> {
-        Some(state + 1)
+        _deadline: std::time::SystemTime,
+    ) -> <DummyGame as Game>::Action {
+        state + 1
     }
 }
 
@@ -308,10 +300,6 @@ impl Game for RPSWrapper {
 
     type Action = RpsAction;
 
-    fn init(&mut self) {
-        *self = RPSWrapper::default();
-    }
-
     fn apply_action(&mut self, action: &Option<Self::Action>) -> anyhow::Result<()> {
         self.actions_buffer.push(*action);
         self.current_player += 1;
@@ -333,7 +321,7 @@ impl Game for RPSWrapper {
         }
     }
 
-    fn get_state(&mut self) -> Self::State {
+    fn get_state(&self) -> Self::State {
         PlayerState {
             player_number: self.current_player,
             state: RpsState {
@@ -348,15 +336,6 @@ impl Game for RPSWrapper {
 
     fn is_finished(&self) -> bool {
         self.finished || self.rps.finished()
-    }
-
-    fn get_game_info(&self) -> game_info::GameInfo {
-        GameInfo {
-            num_player: self.rps.num_players as u32,
-            deterministicness: Deterministic,
-            sequentialness: Simultaneous,
-            information: PerfectInformation,
-        }
     }
 
     fn get_player_score(&self, player_number: u32) -> f32 {

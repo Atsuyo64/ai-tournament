@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use crate::agent::Agent;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Confrontation {
     pub ordered_player: Vec<Arc<Agent>>,
 }

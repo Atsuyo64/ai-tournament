@@ -10,13 +10,12 @@ pub struct Agent {
 }
 
 impl Agent {
-    pub fn new(name: String, path_to_exe: Option<PathBuf>,id:u32) -> Agent {
+    pub fn new(name: String, path_to_exe: Option<PathBuf>, id: u32) -> Agent {
         Agent {
             name,
             compile: path_to_exe.is_some(),
             path_to_exe,
-            id
-            // scores: vec![],
+            id, // scores: vec![],
         }
     }
 }

@@ -33,10 +33,10 @@ pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
         let res = compile_single_agent(&subdir);
         if let Ok(res) = res {
             println!("{GREEN}Ok{RESET}");
-            vec.push(Arc::new(Agent::new(name, Some(res),ids)));
+            vec.push(Arc::new(Agent::new(name, Some(res), ids)));
         } else {
             println!("{RED}{}{RESET}", res.unwrap_err());
-            vec.push(Arc::new(Agent::new(name, None,ids)));
+            vec.push(Arc::new(Agent::new(name, None, ids)));
         }
         ids += 1;
     }

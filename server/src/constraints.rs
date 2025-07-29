@@ -219,7 +219,7 @@ impl ConstraintsBuilder {
             );
         }
 
-        // By default, we use the physical CPU count because using all logical CPUs 
+        // By default, we use the physical CPU count because using all logical CPUs
         // cuts agent performance in half (at least on the machine I tested).
         let cpus = match self.cpus {
             AutoCpus::Auto => {

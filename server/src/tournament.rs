@@ -59,7 +59,7 @@ use std::sync::Arc;
 //     }
 
 //     pub fn get_printable_score(&self, _agent: &Arc<Agent>) -> PrettyScore {
-//         todo!() //TODO: 
+//         todo!() //TODO:
 //     }
 // }
 
@@ -81,7 +81,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
     ) -> Self {
         TournamentScheduler {
             // agents,
-            scores : vec![],
+            scores: vec![],
             resources,
             pending_matches: vec![],
             running_matches: 0,
@@ -94,18 +94,14 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
         let mut matches_to_run = vec![];
 
         // Generate new round if needed
-        if self.running_matches == 0
-            && self.pending_matches.is_empty()
-            && !self.is_finished
-        {
+        if self.running_matches == 0 && self.pending_matches.is_empty() && !self.is_finished {
             self.pending_matches = self.strategy.advance_round(mem::take(&mut self.scores));
-            
+
             if self.pending_matches.is_empty() {
                 // no more matches from `strategy`
                 self.is_finished = true;
             }
         }
-
 
         let cpu_per_match = self.resources.cpus_per_agent * self.strategy.players_per_match(); //FIXME: can be computed for each match
         let ram_per_match = self.resources.agent_ram * self.strategy.players_per_match();
@@ -137,7 +133,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
         self.is_finished // self.strategy.is_complete() && self.pending_matches.is_empty() && self.running_matches == 0
     }
 
-    pub fn final_scores(&self) -> HashMap<Arc<Agent>,S::FinalScore> {
+    pub fn final_scores(&self) -> HashMap<Arc<Agent>, S::FinalScore> {
         self.strategy.get_final_scores()
     }
 }

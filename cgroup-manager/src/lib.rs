@@ -128,12 +128,13 @@ impl LimitedProcess {
         max_memory: i64,
         cpus: &str,
     ) -> anyhow::Result<LimitedProcess> {
-        static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);// lazy cell ? (if multiple evaluations at the same time !)
+        static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1); // lazy cell ? (if multiple evaluations at the same time !)
         let user_id = get_current_user_id().context("could not get user id")?;
         // generate a new cgroup name for each Limited Process
-        let group_name = "CGROUP_MANAGER_".to_owned() + &COUNTER
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-            .to_string();
+        let group_name = "CGROUP_MANAGER_".to_owned()
+            + &COUNTER
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+                .to_string();
         let path = get_cgroup_path(&user_id, &group_name);
         let group =
             create_cgroup(&path, max_memory, 100, cpus).context("could not create cgroup")?;

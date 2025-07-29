@@ -1,15 +1,19 @@
 use crate::games::{DummyFactory, RPSWrapper};
-use server::tournament_strategy::{SinglePlayerTournament, SwissTournament};
 use ::server::{constraints::ConstraintsBuilder, server::Evaluator};
-use tracing_subscriber::{fmt, layer::{Context, Filter, SubscriberExt}, Layer, Registry};
+use server::tournament_strategy::{SinglePlayerTournament, SwissTournament};
 use std::{str::FromStr, time::Duration};
 use tracing::{Level, Metadata};
+use tracing_subscriber::{
+    fmt,
+    layer::{Context, Filter, SubscriberExt},
+    Layer, Registry,
+};
 
 mod games;
 
 struct CustomLevelFilter;
 impl<S> Filter<S> for CustomLevelFilter {
-fn enabled(&self,meta: &Metadata<'_>,_cx: &Context<'_,S>) -> bool {
+    fn enabled(&self, meta: &Metadata<'_>, _cx: &Context<'_, S>) -> bool {
         meta.level() == &Level::DEBUG
     }
 }
@@ -23,11 +27,12 @@ fn init_logger() {
         .with_thread_names(true)
         .with_file(true)
         .with_line_number(true)
-        .with_target(false)
-    ;
+        .with_target(false);
 
     let reg = Registry::default().with(
-        fmt::layer().event_format(format).with_filter(CustomLevelFilter)
+        fmt::layer()
+            .event_format(format)
+            .with_filter(CustomLevelFilter),
     );
 
     let _ = tracing::subscriber::set_global_default(reg);
@@ -37,11 +42,15 @@ fn init_logger() {
 fn launch_dummy() {
     init_logger();
 
-    let params = ConstraintsBuilder::new().with_time_budget(Duration::from_secs(10)).with_total_cpu_count(2).build().unwrap();
+    let params = ConstraintsBuilder::new()
+        .with_time_budget(Duration::from_secs(10))
+        .with_total_cpu_count(2)
+        .build()
+        .unwrap();
     let evaluator = Evaluator::new(DummyFactory {}, params);
     let path = std::env::current_dir().unwrap().join("tests/dummy_agents");
     let tournament = SinglePlayerTournament::new(3);
-    let scores = evaluator.evaluate(path.as_path(),tournament).unwrap();
+    let scores = evaluator.evaluate(path.as_path(), tournament).unwrap();
     dbg!(scores);
 }
 
@@ -49,13 +58,16 @@ fn launch_dummy() {
 fn launch_rock_paper_scissors() {
     init_logger();
 
-    let params = ConstraintsBuilder::new().with_time_budget(Duration::from_secs(10)).build().unwrap();
+    let params = ConstraintsBuilder::new()
+        .with_time_budget(Duration::from_secs(10))
+        .build()
+        .unwrap();
     let evaluator = Evaluator::new(RPSWrapper::default(), params);
     let path = std::env::current_dir()
         .unwrap()
         .join("tests/rock_paper_scissors_agents");
     let tournament = SwissTournament::new(0);
-    let scores = evaluator.evaluate(path.as_path(),tournament).unwrap();
+    let scores = evaluator.evaluate(path.as_path(), tournament).unwrap();
     dbg!(scores);
 }
 

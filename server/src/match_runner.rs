@@ -71,7 +71,6 @@ where
     // Init clocks (time budget)
     let mut time_budgets = vec![resources.time_budget; ordered_player.len()];
 
-    game.init();
     let mut turn = 0;
 
     while !game.is_finished() && !clients.is_empty() {

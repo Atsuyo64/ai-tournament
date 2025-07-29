@@ -26,3 +26,4 @@
 - [ ] swiss prevent double bye
 - [ ] merging interface and cgroup manager into server
 - [ ] renaming server
+- [ ] README + document entry
