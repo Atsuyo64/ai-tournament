@@ -19,11 +19,13 @@
 - [ ] Using a DB (csv) to avoid running same matches (with same agents) again (using binary hash + conf)
 - [x] Check if agents can overflow their piped IO-Buffers
 - [ ] Agent Launcher "trait" => either exe or object
-- [ ] Update Game trait
+- [x] Update Game trait
 - [ ] option to disable print/ANSI
 - [ ] swiss option: 'match-per-confrontation'
 - [ ] swiss prevent playing against same adversary
 - [ ] swiss prevent double bye
-- [ ] merging interface and cgroup manager into server
+- [ ] merging interface and cgroup manager into server ?
 - [ ] renaming server
-- [ ] README + document entry
+- [ ] README + entry documentation
+- [ ] log all matches to a file
+- [ ] cli args with clap (or other)
