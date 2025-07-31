@@ -16,7 +16,7 @@
 //!   * Total think time ("time budget") per agent across a match
 //!
 //! Once built, a [`Constraints`] object can be passed to the evaluator to enforce limits
-//! at runtime. Internally, constraints are enforced using Linux-specific tooling.
+//! at runtime. Internally, constraints are enforced Linux cgroups v2 and taskset.
 //!
 //! # Linux-Only
 //!
