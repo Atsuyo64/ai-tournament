@@ -8,7 +8,7 @@ This project provides tools to benchmark and evaluate AI agents in a controlled 
 
 ### Key Features
 
-- **Pluggable Tournaments**: Define your own tournament logic via the `TournamentStrategy` trait, or use built-in strategies like `SwissTournament` and `RoundRobin`.
+- **Pluggable Tournaments**: Define your own tournament logic via the `TournamentStrategy` trait, or use built-in strategies like `SwissTournament` and `SinglePlayerTournament`.
 - **Custom Games**: Any environment that implements the `Game` trait can be used.
 - **Sandboxed Agent Execution**: Each agent runs in its own isolated process with:
 
@@ -27,15 +27,15 @@ This project provides tools to benchmark and evaluate AI agents in a controlled 
 2. Provide AI agents as Rust crates in a specified directory.
 3. Define resource constraints with the `ConstraintBuilder`.
 4. Choose or implement a `TournamentStrategy`.
-5. Run the evaluator to get per-agent scores, shaped by the tournament type.
+5. Run the evaluator to get per-agent scores, as defined by the tournament type.
 
-## Crate Structure
+## Repository Structure
 
 ```
 .
-├── agent-interface  # Defines shared traits Game and Agent
-├── cgroup-manager   # Handles Linux cgroups v2 for process isolation
-├── server           # Core logic: tournament runner, strategy, constraints, etc.
+├── agent-interface  # Crate defining shared traits Game, GameFactory and Agent
+├── cgroup-manager   # Crate handling Linux cgroups v2 for process isolation
+├── server           # Crate containing core logic: tournament runner, strategy, constraints, etc.
 ├── links.md         # Development references for tournament formats
 └── README.md        # You're here!
 ```
@@ -53,7 +53,7 @@ use server::{
     tournament_strategy::{SinglePlayerScore, SinglePlayerTournament},
 };
 
-// Your custom game implementing the Game + Factory traits
+// Your custom game implementing the Game + GameFactory traits
 use crate::YourGame;
 
 fn main() -> anyhow::Result<()> {
@@ -82,7 +82,7 @@ fn main() -> anyhow::Result<()> {
 ```
 
 > [!NOTE]  
-> Agents must be Rust crates located in the specified directory. Each match and agent runs as a separate, isolated process.
+> Agents must be Rust crates located in the specified directory. Each agent of each match runs as a separate, isolated process.
 
 ## Example Agent
 
