@@ -1,11 +1,133 @@
-# AI-agent-evaluator
+# AI Agent Evaluator
 
-## File organisation:
+A modular Rust crate system for evaluating AI agents via customizable tournaments, supporting sandboxed execution and flexible constraints.
 
-.\
-├── agent-interface  -- crate containing definition of Game and Agent traits.\
-├── cgroup-manager   -- crate with helper function/struct to manage cgroups.\
-├── links.md         -- useful links about kinds of tournaments. Used in development.\
-├── README.md\
-├── server           -- the main crate containing all the logic. See its [README](server/README.md).\
-└── TODO.md          -- project's todo list.
+## Overview
+
+This project provides tools to benchmark and evaluate AI agents in a controlled tournament setting. It supports custom games, custom tournament strategies, and execution isolation using Linux cgroups v2.
+
+### Key Features
+
+- **Pluggable Tournaments**: Define your own tournament logic via the `TournamentStrategy` trait, or use built-in strategies like `SwissTournament` and `RoundRobin`.
+- **Custom Games**: Any environment that implements the `Game` trait can be used.
+- **Sandboxed Agent Execution**: Each agent runs in its own isolated process with:
+
+  * Dedicated CPU cores (`taskset`)
+  * Memory and CPU limits (via cgroups v2)
+  * Action timeouts and total time budgets
+- **Configurable Constraints**: Use the `ConstraintBuilder` to define:
+
+  * CPUs used per agent
+  * Memory limits
+  * Timeouts and think-time budgets
+
+### Usage Summary
+
+1. Implement the `Game` trait for your task or environment.
+2. Provide AI agents as Rust crates in a specified directory.
+3. Define resource constraints with the `ConstraintBuilder`.
+4. Choose or implement a `TournamentStrategy`.
+5. Run the evaluator to get per-agent scores, shaped by the tournament type.
+
+## Crate Structure
+
+```
+.
+├── agent-interface  # Defines shared traits Game and Agent
+├── cgroup-manager   # Handles Linux cgroups v2 for process isolation
+├── server           # Core logic: tournament runner, strategy, constraints, etc.
+├── links.md         # Development references for tournament formats
+└── README.md        # You're here!
+```
+
+See [`server/README.md`](server/README.md) for details on the main crate.
+
+## Usage Example
+
+```rust
+use std::{collections::HashMap, time::Duration};
+use anyhow;
+use server::{
+    constraints::ConstraintsBuilder,
+    server::Evaluator,
+    tournament_strategy::{SinglePlayerScore, SinglePlayerTournament},
+};
+
+// Your custom game implementing the Game + Factory traits
+use crate::YourGame;
+
+fn main() -> anyhow::Result<()> {
+    // Define per-agent constraints
+    let constraints = ConstraintsBuilder::new()
+        .with_ram_per_agent(1000) // in MB
+        .with_action_timeout(Duration::from_millis(100))
+        .build()?;
+
+    let factory = YourGame::new(); // Your game logic
+    let evaluator = Evaluator::new(factory, constraints);
+
+    let tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
+    let results: HashMap<String, SinglePlayerScore> = 
+        evaluator.evaluate("path_to_agents_directory", tournament)?;
+
+    // Sort and display scores
+    let mut sorted = results.iter().collect::<Vec<_>>();
+    sorted.sort_by(|a, b| b.1.cmp(a.1));
+    for (agent_name, score) in sorted {
+        println!("{agent_name}: {score}");
+    }
+
+    Ok(())
+}
+```
+
+> [!NOTE]  
+> Agents must be Rust crates located in the specified directory. Each match and agent runs as a separate, isolated process.
+
+## Example Agent
+
+Here’s a minimal example of an agent compatible with the evaluator system. The agent connects to the evaluator’s server via TCP, reads the game state, and responds with an action:
+
+```rust
+use std::{
+    env,
+    io::{Read, Write},
+    net::{Ipv4Addr, SocketAddrV4, TcpStream},
+    str::FromStr,
+};
+
+use anyhow;
+
+use YourAgent;
+use YourGame;
+
+fn main() -> anyhow::Result<()> {
+    let mut args = env::args();
+    let _ = args.next(); // Skip binary name
+
+    // Read the port number to connect to
+    let port = args.next().unwrap().parse().unwrap();
+    let addr = SocketAddrV4::new(Ipv4Addr::from_str("127.0.0.1")?, port);
+    let mut stream = TcpStream::connect(addr)?;
+
+    let mut agent = YourAgent::new();
+
+    // Interaction loop
+    loop {
+        let mut buf = [0; 4096];
+        let n = stream.read(&mut buf)?;
+        let string = str::from_utf8(&buf[..n]).unwrap();
+
+        // Parse game state, compute action, send it back
+        let game_state = string.parse::<YourGame::State>().unwrap();
+        let action = agent.select_action(game_state)?;
+        stream.write_all(action.to_string().as_bytes())?;
+    }
+}
+```
+
+### Requirements
+
+- `YourGame::State` and `YourGame::Action` must implement `FromStr` and `ToString`
+- The agent must connect to the provided TCP port and handle communication over the stream
+- The agent logic MUST TERMINATE before the configured timeout
