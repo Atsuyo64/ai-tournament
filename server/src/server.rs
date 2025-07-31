@@ -4,7 +4,7 @@ use crate::match_runner::{run_match, MatchSettings, RunnerResult};
 use crate::tournament::TournamentScheduler;
 use crate::tournament_strategy::TournamentStrategy;
 
-pub use agent_interface::{anyhow, Game, GameFactory};
+use agent_interface::{Game, GameFactory};
 use anyhow::bail;
 use std::collections::HashMap;
 use std::io::Write;
@@ -41,7 +41,7 @@ where
 
     pub fn evaluate<T: TournamentStrategy>(
         &self,
-        directory: &std::path::Path,
+        directory: impl AsRef<std::path::Path>,
         mut tournament: T,
     ) -> anyhow::Result<HashMap<String, T::FinalScore>>
     where
@@ -55,6 +55,7 @@ where
             std::process::exit(1);
         }));
 
+        let directory = directory.as_ref();
         // 1. get agents name & code in *directory*
         if !directory.is_dir() {
             bail!("{directory:?} is not a directory");

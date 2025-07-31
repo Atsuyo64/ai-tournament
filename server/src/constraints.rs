@@ -46,7 +46,6 @@ pub struct ConstraintsBuilder {
     action_time: Option<Duration>,
 }
 
-#[allow(dead_code)]
 impl ConstraintsBuilder {
     /// Creates a new `ConstraintsBuilder` with no limits except for total CPU count,
     /// which defaults to the number of physical CPUs on the host machine, and one CPU per agent.
