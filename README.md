@@ -15,7 +15,7 @@ This project provides tools to benchmark and evaluate AI agents in a controlled 
   * Dedicated CPU cores (`taskset`)
   * Memory and CPU limits (via cgroups v2)
   * Action timeouts and total time budgets
-- **Configurable Constraints**: Use the `ConstraintBuilder` to define:
+- **Configurable Constraints**: Use the `ConstraintsBuilder` to define:
 
   * CPUs used per agent
   * Memory limits
@@ -25,7 +25,7 @@ This project provides tools to benchmark and evaluate AI agents in a controlled 
 
 1. Implement the `Game` trait for your task or environment.
 2. Provide AI agents as Rust crates in a specified directory.
-3. Define resource constraints with the `ConstraintBuilder`.
+3. Define resource constraints with the `ConstraintsBuilder`.
 4. Choose or implement a `TournamentStrategy`.
 5. Run the evaluator to get per-agent scores, as defined by the tournament type.
 
@@ -93,7 +93,7 @@ use std::{
     env,
     io::{Read, Write},
     net::{Ipv4Addr, SocketAddrV4, TcpStream},
-    str::FromStr,
+    str::{FromStr},
 };
 
 use anyhow;
@@ -130,4 +130,4 @@ fn main() -> anyhow::Result<()> {
 
 - `YourGame::State` and `YourGame::Action` must implement `FromStr` and `ToString`
 - The agent must connect to the provided TCP port and handle communication over the stream
-- The agent logic MUST TERMINATE before the configured timeout
+- The agent's select_action call must complete before the action timeout, or it will be forcefully terminated.
