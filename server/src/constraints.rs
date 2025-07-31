@@ -1,3 +1,48 @@
+//! Defines resource constraints for AI agent execution.
+//!
+//! This module provides tools to configure and enforce per-agent and global resource limits
+//! during tournament evaluation. Constraints include memory usage, CPU allocation, and timing
+//! restrictions, and are applied using Linux cgroups v2 and `taskset`.
+//!
+//! # Overview
+//!
+//! The main entry point is the [`ConstraintsBuilder`] struct, which uses a builder pattern
+//! to configure limits. These include:
+//!
+//! - **Memory constraints**: max total RAM and per-agent RAM limits
+//! - **CPU constraints**: total CPU count, CPU affinity via list/range, CPUs per agent
+//! - **Timing constraints**:
+//!   * Per-action timeout
+//!   * Total think time ("time budget") per agent across a match
+//!
+//! Once built, a [`Constraints`] object can be passed to the evaluator to enforce limits
+//! at runtime. Internally, constraints are enforced using Linux-specific tooling.
+//!
+//! # Linux-Only
+//!
+//! This module **only works on Linux** systems with **cgroups v2 enabled**. Attempts to run
+//! on other platforms will constrain only timing.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use std::time::Duration;
+//! use server::constraints::ConstraintsBuilder;
+//!
+//! let constraints = ConstraintsBuilder::new()
+//!     .with_max_total_ram(16_000)
+//!     .with_ram_per_agent(2_000)
+//!     .with_cpu_list("0-3")
+//!     .with_cpus_per_agent(2)
+//!     .with_time_budget(Duration::from_secs(600))
+//!     .with_action_timeout(Duration::from_millis(200))
+//!     .build()
+//!     .unwrap();
+//! ```
+//!
+//! You may also construct constraints from environment variables using
+//! [`ConstraintsBuilder::from_env()`] for runtime configurability.
+
 use std::{collections::HashSet, env, time::Duration};
 
 use anyhow::{bail, Context};
@@ -302,6 +347,7 @@ pub struct Constraints {
 }
 
 impl Constraints {
+    /// create a ConstraintsBuilder
     pub fn builder() -> ConstraintsBuilder {
         ConstraintsBuilder::new()
     }
