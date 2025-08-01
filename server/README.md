@@ -14,8 +14,8 @@ This crate contains the core evaluation system: scheduling tournaments, applying
 
 ## How It Works
 
+- Each match consists of one or more agents, each running as a separate OS process with isolated constraints
 - Agents are provided as Rust crates in a directory
-- Each match's agents runs in a separate process with defined constraints
 - Matches are coordinated based on the selected tournament strategy
 
 ## Notes

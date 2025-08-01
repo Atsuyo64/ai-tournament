@@ -5,8 +5,11 @@
 //! It provides:
 //! - Match scheduling and execution (`Evaluator`)
 //! - Tournament logic via the `TournamentStrategy` trait
-//! - Built-in strategies like `SinglePlayerTournament` and `RoundRobin`
+//! - Built-in strategies like `SinglePlayerTournament`, `SwissTournament` and `RoundRobin`
 //! - Resource constraints enforced through Linux cgroups v2 and `taskset`
+//!
+//! Each match consists of one or more agents, each running as a separate OS process.
+//! Process-level isolation applies constraints such as CPU affinity, memory limits, and timeouts.
 //!
 //! # Usage Example
 //!
@@ -130,7 +133,9 @@
 //!
 //! - `Game::State` and `Game::Action` must implement `ToString` and `FromStr`
 //! - Agent logic must terminate within the configured timeout
-//! - Communication is done over TCP using a basic protocol: `GameState` (→ agent), `Action` (→ server)
+//! - Communication is done over TCP using a basic protocol:
+//!  * Server -> Agent : string of Game::State
+//!  * Agent -> Server : string of Game::Action
 #![warn(missing_docs)]
 
 pub use agent_interface::{anyhow, Game, GameFactory};

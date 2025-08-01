@@ -1,3 +1,15 @@
+//! Core evaluation logic for running AI tournaments.
+//!
+//! This module defines the [`Evaluator`] type, which manages the tournament execution:
+//! - Compiles agents from a specified directory
+//! - Runs the tournament using a user-defined [`TournamentStrategy`]
+//! - Enforces resource constraints (e.g., CPU, memory) during agent execution
+//! - Returns final scores according to the tournament strategy
+//!
+//! # Example
+//!
+//! See crate-level documentation for an example on how to use the `Evaluator`.
+
 use crate::agent_compiler;
 use crate::constraints::Constraints;
 use crate::match_runner::{run_match, MatchSettings, RunnerResult};
@@ -12,6 +24,13 @@ use std::str::FromStr;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{mpsc, Arc, Mutex};
 
+/// The main type for running AI agent tournaments.
+///
+/// It compiles agents, schedules matches, applies resource constraints, and collects final scores.
+///
+/// # Type Parameters
+/// - `G`: The game type implementing [`Game`]
+/// - `F`: A factory implementing [`GameFactory<G>`]
 pub struct Evaluator<G, F>
 where
     G: Game,
@@ -39,6 +58,17 @@ where
         }
     }
 
+    /// Executes a tournament between agents found in the specified directory.
+    ///
+    /// # Parameters
+    /// - `directory`: Path to the directory containing agent crates
+    /// - `tournament`: Tournament strategy to run
+    ///
+    /// # Returns
+    /// A `HashMap` of agent names to final scores, based on the selected tournament strategy.
+    ///
+    /// # Errors
+    /// Returns an error if the directory is invalid.
     pub fn evaluate<T: TournamentStrategy>(
         &self,
         directory: impl AsRef<std::path::Path>,
