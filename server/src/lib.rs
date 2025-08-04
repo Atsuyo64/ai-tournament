@@ -46,7 +46,6 @@
 //!     tournament_strategy::{SinglePlayerScore, SinglePlayerTournament},
 //! };
 //!
-//! // Your custom game implementing the Game + GameFactory traits
 //!
 //! fn main() -> anyhow::Result<()> {
 //!     // Define per-agent constraints
@@ -55,6 +54,7 @@
 //!         .with_action_timeout(Duration::from_millis(100))
 //!         .build()?;
 //!
+//!     // Your custom game implementing the Game + GameFactory traits
 //!     let factory = YourGame::new();
 //!     let evaluator = Evaluator::new(factory, constraints);
 //!

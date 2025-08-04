@@ -1,3 +1,25 @@
+//! Tournament strategies used by the evaluator to schedule agent matchups.
+//!
+//! This module defines the [`TournamentStrategy`] trait and several built-in strategies
+//! (e.g., Swiss, Round Robin, Single Player) used by the server-side evaluator to structure
+//! tournaments and process match results.
+//!
+//! Although this trait and types are public to allow advanced users to define custom strategies,
+//! they are not intended for direct use or manual orchestration of tournaments.
+//!
+//! # Provided Strategies
+//! - [`RoundRobinTournament`]: Every agent plays every other agent. Quite slow.
+//! - [`SwissTournament`]: Pairings based on score, with optional tie-breakers. Mush faster than
+//! Round Robin
+//! - [`SinglePlayerTournament`]: Each agent plays independently multiple times.
+//!
+//! # Implementing a Custom Strategy
+//! To implement a new tournament format, define your own type that implements
+//! [`TournamentStrategy`].
+//!
+//! The server will call `add_agents`, then repeatedly call `advance_round`
+//! until it returns an empty list. Once finished, `get_final_scores` is used to produce the ranking.
+
 use std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -8,22 +30,52 @@ use tracing::info;
 
 use crate::{agent::Agent, match_runner::MatchResult};
 
+/// A trait defining how agents are grouped, matched, and scored in a tournament.
+///
+/// Implement this trait to define a custom tournament format. The tournament is responsible for:
+/// - Receiving a set of agents
+/// - Generating matches to run per round
+/// - Processing match results
+/// - Producing a final score for each agent
 pub trait TournamentStrategy {
-    fn add_agents(&mut self, agents: Vec<Arc<Agent>>);
-    /// get new matches based on current round `scores`.
-    ///
-    /// If result is empty, the Tournament is considered finished
-    fn advance_round(&mut self, scores: Vec<MatchResult>) -> Vec<Vec<Arc<Agent>>>;
-    fn players_per_match(&self) -> usize;
+    /// The score type produced at the end of the tournament.
     type FinalScore: Ord;
+
+    /// Adds a list of agents to the tournament.
+    ///
+    /// Must be called before advancing rounds. This method may be used to initialize internal
+    /// score or pairing state.
+    fn add_agents(&mut self, agents: Vec<Arc<Agent>>);
+
+    /// Returns new matchups for the next round, based on the latest match results.
+    ///
+    /// If the returned list is empty, the tournament is finished.
+    ///
+    /// Each match is a list of agents (usually 2), and will be scored externally.
+    fn advance_round(&mut self, scores: Vec<MatchResult>) -> Vec<Vec<Arc<Agent>>>;
+
+    /// Returns the number of players per match required by this strategy.
+    ///
+    /// This value must match the length of each sub-`Vec` returned by `advance_round`.
+    fn players_per_match(&self) -> usize;
+
+    /// Returns the final scores for all agents once the tournament is complete.
     fn get_final_scores(&self) -> HashMap<Arc<Agent>, Self::FinalScore>;
 }
 
+/// Score summary for agents in two-player tournaments.
+///
+/// Used in `SwissTournament` and `RoundRobinTournament`. This type tracks the total number of wins,
+/// draws, losses, and an optional tie-breaker value.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Default, Debug, Clone, Copy)]
 pub struct TwoPlayersGameScore {
+    /// Number of wins.
     pub num_win: u32,
+    /// Number of draws.
     pub num_draw: u32,
+    /// Number of losses.
     pub num_lose: u32,
+    /// Additional tie-breaker value.
     pub tie_breaker: u32,
 }
 
@@ -37,6 +89,10 @@ impl std::fmt::Display for TwoPlayersGameScore {
     }
 }
 
+/// A Swiss-style tournament strategy for two-player games.
+///
+/// Agents are paired based on their current score. The number of rounds can be fixed,
+/// or automatically determined as `ceil(log2(num_players))`.
 pub struct SwissTournament {
     agents: Vec<Arc<Agent>>,
     round: usize,
@@ -45,10 +101,10 @@ pub struct SwissTournament {
 }
 
 impl SwissTournament {
-    /// Creates a new Swiss tournament.
+    /// Creates a new Swiss tournament with a maximum number of rounds.
     ///
-    /// Set `max_rounds` to `0` to automatically determine the number of rounds,
-    /// which will be calculated as `ceil(log2(num_players))`.
+    /// If `max_rounds` is set to `0`, the number of rounds will be determined automatically
+    /// based on the number of agents (as `ceil(log2(n))`).
     pub fn new(max_rounds: usize) -> Self {
         Self {
             agents: vec![],
@@ -179,6 +235,9 @@ impl TournamentStrategy for SwissTournament {
     }
 }
 
+/// A round-robin tournament where each agent plays against every other agent.
+///
+/// If `symmetric` is false, each pair is evaluated in both directions (A vs B and B vs A).
 pub struct RoundRobinTournament {
     scores: HashMap<Arc<Agent>, TwoPlayersGameScore>,
     agents: Vec<Arc<Agent>>,
@@ -186,7 +245,9 @@ pub struct RoundRobinTournament {
 }
 
 impl RoundRobinTournament {
-    /// symmetric means `A VS B` should give the same result as `B VS A`
+    /// Creates a new Round Robin tournament.
+    ///
+    /// Set `symmetric = true` if A vs B is equivalent to B vs A.
     pub fn new(symmetric: bool) -> Self {
         Self {
             symmetric,
@@ -264,6 +325,9 @@ impl TournamentStrategy for RoundRobinTournament {
     }
 }
 
+/// Holds a list of scores for an agent in a single-player tournament.
+///
+/// Implements ordering by comparison.
 #[derive(PartialEq, Debug, Clone, Default)]
 pub struct SinglePlayerScore(pub Vec<f32>);
 
@@ -281,6 +345,9 @@ impl Ord for SinglePlayerScore {
     }
 }
 
+/// A tournament where each agent plays independently across multiple games.
+///
+/// Each agent is evaluated in isolation, and scores are stored as lists of `f32`.
 pub struct SinglePlayerTournament {
     game_per_agent: usize,
     agents: Vec<Arc<Agent>>,
@@ -288,7 +355,9 @@ pub struct SinglePlayerTournament {
 }
 
 impl SinglePlayerTournament {
-    /// game_per_agent
+    /// Creates a new single-player tournament.
+    ///
+    /// `game_per_agent` determines how many games each agent will play.
     pub fn new(game_per_agent: usize) -> Self {
         Self {
             game_per_agent,
