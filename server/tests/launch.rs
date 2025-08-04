@@ -68,7 +68,10 @@ fn launch_rock_paper_scissors() {
         .join("tests/rock_paper_scissors_agents");
     let tournament = SwissTournament::new(0);
     let scores = evaluator.evaluate(path.as_path(), tournament).unwrap();
-    dbg!(scores);
+    for (name, score) in scores.into_iter() {
+        println!("{name}: {score}");
+    }
+    // dbg!(scores);
 }
 
 #[test]
