@@ -10,6 +10,7 @@
 //!
 //! See crate-level documentation for an example on how to use the `Evaluator`.
 
+use crate::agent::Agent;
 use crate::agent_compiler;
 use crate::constraints::Constraints;
 use crate::match_runner::{run_match, MatchSettings, RunnerResult};
@@ -19,9 +20,8 @@ use crate::tournament_strategy::TournamentStrategy;
 use agent_interface::{Game, GameFactory};
 use anyhow::bail;
 use std::collections::HashMap;
-use std::io::Write;
 use std::str::FromStr;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc, Mutex};
 
 /// The main type for running AI agent tournaments.
@@ -45,11 +45,11 @@ where
 
 impl<G: Game, F: GameFactory<G>> Evaluator<G, F>
 where
-    F: Clone + Send + 'static,
     G::State: FromStr + ToString,
     G::Action: FromStr + ToString,
     G: 'static + Send,
 {
+    /// Create an [`Evaluator`] with given [`Constraints`] and [`GameFactory`]
     pub fn new(factory: F, params: Constraints) -> Evaluator<G, F> {
         Evaluator {
             factory,
@@ -77,22 +77,11 @@ where
     where
         T::FinalScore: 'static,
     {
-        // 0. setup panic hook to exit on panic (would not exit on thread panic)
-        let orig_hook = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |panic_info| {
-            // invoke the default handler and exit the process
-            orig_hook(panic_info);
-            std::process::exit(1);
-        }));
+        // 1. Exit on panic otherwise the program would be in a deadlock
+        Self::setup_panic_hook();
 
-        let directory = directory.as_ref();
-        // 1. get agents name & code in *directory*
-        if !directory.is_dir() {
-            bail!("{directory:?} is not a directory");
-        }
-
-        // 2. try to compile each one of them
-        let agents = agent_compiler::compile_all_agents(directory);
+        // 2. get agents name & code in *directory*
+        let agents = Self::collect_agents(directory.as_ref())?;
 
         // 3. add agents to tournament
         tournament.add_agents(agents);
@@ -100,121 +89,128 @@ where
         // 4. create scheduler and communication channels
         let mut scheduler = TournamentScheduler::new(self.params.clone(), tournament);
         let (tx_result, rx_result) = mpsc::channel();
-        let (tx_match, rx_match) = mpsc::channel::<MatchSettings>();
 
-        // 5. start match dispatcher (block waiting on match)
-        let factory: F = self.factory.clone();
-        let match_dispatcher =
-            std::thread::spawn(move || match_dispatcher(rx_match, tx_result, factory));
+        // 5. create running matches shared vector
+        let running = Arc::new(Mutex::new(vec![]));
 
         // 6. Init matches
-        for m in scheduler.advance() {
-            tx_match.send(m).unwrap();
-        }
+        self.launch_initial_matches(&mut scheduler, &tx_result, &running);
 
         // 7. main loop
         while !scheduler.is_finished() {
+            // not finished <=> match running <=> result to receive
             let result = rx_result.recv().unwrap();
-            for m in scheduler.on_result(result) {
-                tx_match.send(m).unwrap();
+            for new_match in scheduler.on_result(result) {
+                self.launch_match(new_match, tx_result.clone(), &running);
             }
         }
 
-        drop(tx_match); // should end match dispatcher
-        match_dispatcher.join().unwrap();
+        Ok(Self::collect_final_scores(&scheduler))
+    }
 
-        let mapped_score = scheduler
+    fn setup_panic_hook() {
+        let orig_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |panic_info| {
+            orig_hook(panic_info);
+            std::process::exit(1);
+        }));
+    }
+
+    fn collect_agents(directory: &std::path::Path) -> anyhow::Result<Vec<Arc<Agent>>> {
+        if !directory.is_dir() {
+            bail!("'{directory:?}' is not a valid directory");
+        }
+        Ok(agent_compiler::compile_all_agents(directory))
+    }
+
+    fn launch_initial_matches<T: TournamentStrategy>(
+        &self,
+        scheduler: &mut TournamentScheduler<T>,
+        tx_result: &Sender<RunnerResult>,
+        running: &Arc<Mutex<Vec<MatchSettings>>>,
+    ) {
+        for m in scheduler.advance() {
+            self.launch_match(m, tx_result.clone(), running);
+        }
+    }
+
+    fn collect_final_scores<T: TournamentStrategy>(
+        scheduler: &TournamentScheduler<T>,
+    ) -> HashMap<String, T::FinalScore> {
+        scheduler
             .final_scores()
             .into_iter()
             .map(|(agent, score)| (agent.name.clone(), score))
-            .collect::<HashMap<_, _>>();
-
-        Ok(mapped_score)
+            .collect::<HashMap<_, _>>()
     }
-}
 
-fn match_dispatcher<F, G>(
-    rx_match: Receiver<MatchSettings>,
-    tx_result: Sender<RunnerResult>,
-    factory: F,
-) where
-    F: GameFactory<G>,
-    G: Game,
-    F: Clone + Send + 'static,
-    G::State: FromStr + ToString,
-    G::Action: FromStr + ToString,
-    G: 'static + Send,
-{
-    // only for printing purpose
-    let running_matches = Arc::new(Mutex::new(Vec::<String>::new()));
+    fn launch_match(
+        &self,
+        match_settings: MatchSettings,
+        tx_result: Sender<RunnerResult>,
+        running: &Arc<Mutex<Vec<MatchSettings>>>,
+    ) {
+        let game = self.factory.new_game();
+        let mutex = running.clone();
 
-    // hide cursor + disable line wrapping
-    print!("\x1b[?25l\x1b[?7l");
+        let mut guard = mutex.lock().expect("poisoned");
+        guard.push(match_settings.clone());
+        print_running_matches(&guard);
+        drop(guard);
 
-    for match_settings in rx_match {
-        let string = match_settings.to_string();
-        let new_game = factory.new_game();
-        let tx_result = tx_result.clone();
-        let c_mutex = running_matches.clone();
-        add_match(&string, &running_matches);
         std::thread::spawn(move || {
-            let result = run_match(match_settings, new_game);
-            remove_match(&string, &c_mutex, &result);
+            let result = run_match(match_settings.clone(), game);
+
+            print_runner_result(&match_settings, &result);
+            Self::remove_running_match(&mutex, &match_settings);
+
             tx_result.send(result).unwrap();
         });
     }
 
-    // unhide the cursor at the end + re-unable line wrapping
-    print!("\x1b[?25h\x1b[?7h");
-
-    fn add_match(match_string: &str, running_matches: &Mutex<Vec<String>>) {
-        let mut running = running_matches.lock().expect("mutex poisoning");
-        running.push(match_string.to_owned());
-        print_running_matches(&running);
-    }
-
-    fn remove_match(
-        match_string: &String,
-        running_matches: &Mutex<Vec<String>>,
-        result: &RunnerResult,
-    ) {
-        let mut running = running_matches.lock().expect("mutex poisoning");
-        let pos = running
+    fn remove_running_match(mutex: &Mutex<Vec<MatchSettings>>, running: &MatchSettings) {
+        let mut guard = mutex.lock().expect("poisoned");
+        let pos = guard
             .iter()
-            .position(|s| *s == *match_string)
-            .expect("running match not found");
-        running.remove(pos);
-        print_runner_result(match_string, result);
-        print_running_matches(&running);
+            .position(|s| s == running)
+            .expect("error: got result of a match that was not started (or got result twice)");
+        guard.remove(pos);
     }
-    fn print_runner_result(match_string: &String, result: &RunnerResult) {
-        let mut ordered_scores = Vec::new();
-        for name in match_string[1..match_string.len() - 1].split(" VS ") {
-            let res = result
-                .results
-                .iter()
-                .find_map(|a| if a.0.name == name { Some(a.1) } else { None })
-                .expect("agent not found");
-            ordered_scores.push(res);
-        }
-        let ordered_scores = ordered_scores
-            .into_iter()
-            .map(|f| format!("{f}"))
-            .collect::<Vec<_>>()
-            .join("-");
+}
 
-        // clear line, green match, results, red errors, start of line
-        println!(
-            "\x1b[2K\x1b[32m{}: \x1b[39m{} \x1b[31m{}\x1b[39m\x1b[0G",
-            match_string, ordered_scores, result.errors
-        );
+fn print_runner_result(match_settings: &MatchSettings, result: &RunnerResult) {
+    let mut ordered_scores = Vec::new();
+    for player in &match_settings.ordered_player {
+        let name = &player.name;
+        let res = result
+            .results
+            .iter()
+            .find_map(|a| if &a.0.name == name { Some(a.1) } else { None })
+            .expect("agent not found");
+        ordered_scores.push(res);
     }
-    fn print_running_matches(running: &[String]) {
-        // clear, green, default, start of line
-        print!(
-            "\x1b[2K\x1b[32mRunning...:\x1b[39m {}\x1b[0G",
-            running.join(", ")
-        );
-        let _ = std::io::stdout().flush();
-    }
+    let ordered_scores = ordered_scores
+        .into_iter()
+        .map(|f| format!("{f}"))
+        .collect::<Vec<_>>()
+        .join("-");
+
+    // clear line, green match, results, red errors, start of line
+    println!(
+        "\x1b[2K\x1b[32m{match_settings}: \x1b[39m{ordered_scores} \x1b[31m{}\x1b[39m\x1b[0G",
+        result.errors
+    );
+}
+
+fn print_running_matches(running: &[MatchSettings]) {
+    // clear, green, default, start of line
+    print!(
+        "\x1b[2K\x1b[32mRunning...:\x1b[39m {}\x1b[0G",
+        running
+            .iter()
+            .map(MatchSettings::to_string)
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    let _ = std::io::Write::flush(&mut std::io::stdout());
 }
