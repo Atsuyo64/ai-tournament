@@ -336,7 +336,7 @@ fn cpu_list_to_hashset(s: &str) -> anyhow::Result<HashSet<u8>> {
 }
 
 /// Obtained using `ConstraintsBuilder`
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constraints {
     pub(crate) total_ram: usize,
     pub(crate) agent_ram: usize,

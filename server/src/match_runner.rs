@@ -5,7 +5,7 @@ use tracing::{info, instrument, trace, warn};
 
 use crate::{agent::Agent, client_handler::ClientHandler, constraints::Constraints};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MatchSettings {
     pub ordered_player: Vec<Arc<Agent>>,
     pub resources: Constraints,
@@ -28,7 +28,7 @@ pub type MatchResult = Vec<(Arc<Agent>, f32)>;
 #[derive(Debug, Clone)]
 pub struct RunnerResult {
     pub results: MatchResult,
-    pub resources_freed: Constraints,
+    pub settings: MatchSettings,
     pub errors: String,
     // pub duration: Duration,
 }
@@ -186,7 +186,10 @@ where
     trace!("match end");
     RunnerResult {
         results,
-        resources_freed: resources,
+        settings: MatchSettings {
+            ordered_player,
+            resources,
+        },
         errors: errors_string,
     }
 }
