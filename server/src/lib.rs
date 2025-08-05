@@ -58,7 +58,7 @@
 //!     let factory = YourGame::new();
 //!     let evaluator = Evaluator::new(factory, constraints);
 //!
-//!     let tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
+//!     let mut tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
 //!     let results: HashMap<String, SinglePlayerScore> =
 //!         evaluator.evaluate("path_to_agents_directory", tournament)?;
 //!

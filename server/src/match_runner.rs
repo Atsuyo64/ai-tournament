@@ -28,7 +28,7 @@ pub type MatchResult = Vec<(Arc<Agent>, f32)>;
 #[derive(Debug, Clone)]
 pub struct RunnerResult {
     pub results: MatchResult,
-    pub settings: MatchSettings,
+    pub resources_freed: Constraints,
     pub errors: String,
     // pub duration: Duration,
 }
@@ -186,10 +186,7 @@ where
     trace!("match end");
     RunnerResult {
         results,
-        settings: MatchSettings {
-            ordered_player,
-            resources,
-        },
+        resources_freed: resources,
         errors: errors_string,
     }
 }

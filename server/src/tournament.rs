@@ -124,7 +124,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
 
     pub fn on_result(&mut self, result: RunnerResult) -> Vec<MatchSettings> {
         self.scores.push(result.results);
-        self.resources.add(result.settings.resources);
+        self.resources.add(result.resources_freed);
         self.running_matches -= 1;
         self.advance()
     }
