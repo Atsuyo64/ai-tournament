@@ -36,7 +36,6 @@ This project provides tools to benchmark and evaluate AI agents in a controlled 
 ├── agent-interface  # Crate defining shared traits Game, GameFactory and Agent
 ├── cgroup-manager   # Crate handling Linux cgroups v2 for process isolation
 ├── server           # Crate containing core logic: tournament runner, strategy, constraints, etc.
-├── links.md         # Development references for tournament formats
 └── README.md        # You're here!
 ```
 
