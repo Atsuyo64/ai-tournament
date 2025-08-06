@@ -9,8 +9,7 @@
 //!
 //! # Provided Strategies
 //! - [`RoundRobinTournament`]: Every agent plays every other agent. Quite slow.
-//! - [`SwissTournament`]: Pairings based on score, with optional tie-breakers. Mush faster than
-//! Round Robin
+//! - [`SwissTournament`]: Pairings based on score, with optional tie-breakers. Mush faster than Round Robin
 //! - [`SinglePlayerTournament`]: Each agent plays independently multiple times.
 //!
 //! # Implementing a Custom Strategy
