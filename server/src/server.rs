@@ -12,6 +12,7 @@
 
 use crate::agent::Agent;
 use crate::agent_compiler;
+use crate::configuration::Configuration;
 use crate::constraints::Constraints;
 use crate::match_runner::{run_match, MatchSettings, RunnerResult};
 use crate::tournament::TournamentScheduler;
@@ -39,7 +40,8 @@ where
     G::Action: FromStr + ToString,
 {
     factory: F,
-    params: Constraints,
+    constraints: Constraints,
+    config: Configuration,
     _ff: std::marker::PhantomData<G>,
 }
 
@@ -50,10 +52,11 @@ where
     G: 'static + Send,
 {
     /// Create an [`Evaluator`] with given [`Constraints`] and [`GameFactory`]
-    pub fn new(factory: F, params: Constraints) -> Evaluator<G, F> {
+    pub fn new(factory: F, config: Configuration, constraints: Constraints) -> Evaluator<G, F> {
         Evaluator {
             factory,
-            params,
+            config,
+            constraints,
             _ff: std::marker::PhantomData,
         }
     }
@@ -87,7 +90,7 @@ where
         tournament.add_agents(agents);
 
         // 4. create scheduler and communication channels
-        let mut scheduler = TournamentScheduler::new(self.params.clone(), tournament);
+        let mut scheduler = TournamentScheduler::new(self.constraints.clone(), tournament);
         let (tx_result, rx_result) = mpsc::channel();
 
         // 5. create running matches shared vector

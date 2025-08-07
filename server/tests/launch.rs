@@ -1,6 +1,9 @@
 use crate::games::{DummyFactory, RPSWrapper};
 use ::server::{constraints::ConstraintsBuilder, server::Evaluator};
-use server::tournament_strategy::{SinglePlayerTournament, SwissTournament};
+use server::{
+    configuration::Configuration,
+    tournament_strategy::{SinglePlayerTournament, SwissTournament},
+};
 use std::{str::FromStr, time::Duration};
 use tracing::{Level, Metadata};
 use tracing_subscriber::{
@@ -47,7 +50,7 @@ fn launch_dummy() {
         .with_total_cpu_count(2)
         .build()
         .unwrap();
-    let evaluator = Evaluator::new(DummyFactory {}, params);
+    let evaluator = Evaluator::new(DummyFactory {}, Configuration::new(), params);
     let path = std::env::current_dir().unwrap().join("tests/dummy_agents");
     let tournament = SinglePlayerTournament::new(3);
     let scores = evaluator.evaluate(path.as_path(), tournament).unwrap();
@@ -62,7 +65,7 @@ fn launch_rock_paper_scissors() {
         .with_time_budget(Duration::from_secs(10))
         .build()
         .unwrap();
-    let evaluator = Evaluator::new(RPSWrapper::default(), params);
+    let evaluator = Evaluator::new(RPSWrapper::default(), Configuration::new(), params);
     let path = std::env::current_dir()
         .unwrap()
         .join("tests/rock_paper_scissors_agents");
