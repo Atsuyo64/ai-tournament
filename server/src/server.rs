@@ -125,7 +125,7 @@ where
         }
         Ok(agent_compiler::compile_all_agents(
             directory,
-            !self.config.silent,
+            self.config.verbose,
         ))
     }
 
@@ -161,13 +161,18 @@ where
 
         let mut guard = mutex.lock().expect("poisoned");
         guard.push(match_settings.clone());
-        print_running_matches(&guard);
+        if self.config.verbose {
+            print_running_matches(&guard);
+        }
         drop(guard);
 
+        let verbose = self.config.verbose;
         std::thread::spawn(move || {
             let result = run_match(match_settings.clone(), game);
 
-            print_runner_result(&match_settings, &result);
+            if verbose {
+                print_runner_result(&match_settings, &result);
+            }
             Self::remove_running_match(&mutex, &match_settings);
 
             tx_result.send(result).unwrap();

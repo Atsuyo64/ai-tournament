@@ -50,10 +50,13 @@ fn launch_dummy() {
         .with_total_cpu_count(2)
         .build()
         .unwrap();
-    let evaluator = Evaluator::new(DummyFactory {}, Configuration::new(), params);
-    let path = std::env::current_dir().unwrap().join("tests/dummy_agents");
+
+    let config = Configuration::new().with_verbose(false);
+
+    let evaluator = Evaluator::new(DummyFactory {}, config, params);
+    let path = "tests/dummy_agents";
     let tournament = SinglePlayerTournament::new(3);
-    let scores = evaluator.evaluate(path.as_path(), tournament).unwrap();
+    let scores = evaluator.evaluate(&path, tournament).unwrap();
     dbg!(scores);
 }
 
@@ -66,11 +69,9 @@ fn launch_rock_paper_scissors() {
         .build()
         .unwrap();
     let evaluator = Evaluator::new(RPSWrapper::default(), Configuration::new(), params);
-    let path = std::env::current_dir()
-        .unwrap()
-        .join("tests/rock_paper_scissors_agents");
+    let path = "tests/rock_paper_scissors_agents";
     let tournament = SwissTournament::new(0);
-    let scores = evaluator.evaluate(path.as_path(), tournament).unwrap();
+    let scores = evaluator.evaluate(&path, tournament).unwrap();
     for (name, score) in scores.into_iter() {
         println!("{name}: {score}");
     }

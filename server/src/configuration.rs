@@ -1,30 +1,50 @@
 //! Config for the evaluator behaviors
 
-/// Struct containing configuration fo evaluator behaviors
+/// Configuration for evaluator behaviors.
 #[derive(Debug, Clone, Copy)]
 pub struct Configuration {
-    pub(crate) silent: bool,
+    pub(crate) verbose: bool,
     pub(crate) log: bool,
-    pub(crate) allow_unsafe: bool,
+    pub(crate) allow_uncontained: bool,
 }
 
 impl Configuration {
-    /// Create new Config with default parameters
+    /// Create a new configuration with default parameters.
     ///
-    /// By default, the evaluator will pretty-print running matches, will not create a log file,
-    /// and will panic if cgroups v2 or taskset is missing.
+    /// By default:
+    /// - The evaluator will print match progress to stdout.
+    /// - Logging to file is disabled.
+    /// - Unsafe fallbacks (e.g. skipping taskset or cgroup checks) are not allowed.
     pub fn new() -> Self {
         Self {
-            silent: false,
+            verbose: true,
             log: false,
-            allow_unsafe: false,
+            allow_uncontained: false,
         }
     }
 
-    /// Create new Config from environment variables
+    /// Create configuration from environment variables.
     pub fn from_env() -> Self {
-        //TODO:
-        todo!("Config::from_env")
+        // TODO: implement reading configuration from environment
+        todo!("Configuration::from_env")
+    }
+
+    /// Enable or disable silent mode.
+    pub fn with_verbose(mut self, value: bool) -> Self {
+        self.verbose = value;
+        self
+    }
+
+    /// Enable or disable logging to file.
+    pub fn with_log(mut self, value: bool) -> Self {
+        self.log = value;
+        self
+    }
+
+    /// Enable or disable unsafe fallbacks.
+    pub fn with_allow_uncontained(mut self, value: bool) -> Self {
+        self.allow_uncontained = value;
+        self
     }
 }
 
