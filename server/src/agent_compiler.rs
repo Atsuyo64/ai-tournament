@@ -2,7 +2,7 @@ use std::{fs::DirEntry, io::Write, path::PathBuf, sync::Arc};
 
 use crate::agent::Agent;
 
-pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
+pub fn compile_all_agents(directory: &std::path::Path, verbose: bool) -> Vec<Arc<Agent>> {
     let mut vec: Vec<Arc<Agent>> = Vec::new();
     const RED: &str = "\x1b[31m";
     const GREEN: &str = "\x1b[32m";
@@ -14,7 +14,9 @@ pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
         .fold(0, |acu, entry| acu.max(entry.file_name().len()))
         + 3; // at least 3 dots
 
-    println!("Compiling agents...");
+    if verbose {
+        println!("Compiling agents...");
+    }
     let mut ids = 1;
     for subdir in std::fs::read_dir(directory).unwrap() {
         let Ok(subdir) = subdir else {
@@ -22,20 +24,28 @@ pub fn compile_all_agents(directory: &std::path::Path) -> Vec<Arc<Agent>> {
         };
         let name = subdir.file_name().into_string().unwrap();
 
-        print!("Compiling {name:·<longest_name$} ");
-        let _ = std::io::stdout().flush(); // try to flush stdout
+        if verbose {
+            print!("Compiling {name:·<longest_name$} ");
+            let _ = std::io::stdout().flush(); // try to flush stdout
+        }
 
         if subdir.metadata().unwrap().is_file() {
-            println!("{RED}Not a directory{RESET}");
+            if verbose {
+                println!("{RED}Not a directory{RESET}");
+            }
             continue;
         }
 
         let res = compile_single_agent(&subdir);
         if let Ok(res) = res {
-            println!("{GREEN}Ok{RESET}");
+            if verbose {
+                println!("{GREEN}Ok{RESET}");
+            }
             vec.push(Arc::new(Agent::new(name, Some(res), ids)));
         } else {
-            println!("{RED}{}{RESET}", res.unwrap_err());
+            if verbose {
+                println!("{RED}{}{RESET}", res.unwrap_err());
+            }
             vec.push(Arc::new(Agent::new(name, None, ids)));
         }
         ids += 1;

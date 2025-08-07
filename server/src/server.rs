@@ -84,7 +84,7 @@ where
         Self::setup_panic_hook();
 
         // 2. get agents name & code in *directory*
-        let agents = Self::collect_agents(directory.as_ref())?;
+        let agents = self.collect_agents(directory.as_ref())?;
 
         // 3. add agents to tournament
         tournament.add_agents(agents);
@@ -119,11 +119,14 @@ where
         }));
     }
 
-    fn collect_agents(directory: &std::path::Path) -> anyhow::Result<Vec<Arc<Agent>>> {
+    fn collect_agents(&self, directory: &std::path::Path) -> anyhow::Result<Vec<Arc<Agent>>> {
         if !directory.is_dir() {
             bail!("'{directory:?}' is not a valid directory");
         }
-        Ok(agent_compiler::compile_all_agents(directory))
+        Ok(agent_compiler::compile_all_agents(
+            directory,
+            !self.config.silent,
+        ))
     }
 
     fn launch_initial_matches<T: TournamentStrategy>(
