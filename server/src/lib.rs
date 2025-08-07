@@ -42,10 +42,10 @@
 //! use anyhow;
 //! use server::{
 //!     constraints::ConstraintsBuilder,
+//!     configuration::Configuration,
 //!     server::Evaluator,
 //!     tournament_strategy::{SinglePlayerScore, SinglePlayerTournament},
 //! };
-//!
 //!
 //! fn main() -> anyhow::Result<()> {
 //!     // Define per-agent constraints
@@ -54,9 +54,13 @@
 //!         .with_action_timeout(Duration::from_millis(100))
 //!         .build()?;
 //!
+//!     // Create a configuration allowing uncontained execution if cgroup v2 or taskset are not
+//!     // available
+//!     let config = Configuration::new().with_allow_uncontained(true);
+//!
 //!     // Your custom game implementing the Game + GameFactory traits
 //!     let factory = YourGame::new();
-//!     let evaluator = Evaluator::new(factory, constraints);
+//!     let evaluator = Evaluator::new(factory, config, constraints);
 //!
 //!     let mut tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
 //!     let results: HashMap<String, SinglePlayerScore> =

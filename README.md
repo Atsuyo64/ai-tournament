@@ -44,13 +44,14 @@ See [`server/README.md`](server/README.md) for details on the main crate.
 ## Usage Example
 
 ```rust
-use std::{collections::HashMap, time::Duration};
 use anyhow;
 use server::{
+    configuration::Configuration,
     constraints::ConstraintsBuilder,
     server::Evaluator,
     tournament_strategy::{SinglePlayerScore, SinglePlayerTournament},
 };
+use std::{collections::HashMap, time::Duration};
 
 // Your custom game implementing the Game + GameFactory traits
 use crate::YourGame;
@@ -62,18 +63,21 @@ fn main() -> anyhow::Result<()> {
         .with_action_timeout(Duration::from_millis(100))
         .build()?;
 
+    // Define evaluator behaviour
+    let config = Configuration::new().with_allow_uncontained(true);
+
     let factory = YourGame::new(); // Your game logic
-    let evaluator = Evaluator::new(factory, constraints);
+    let evaluator = Evaluator::new(factory, config, constraints);
 
     let tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
-    let results: HashMap<String, SinglePlayerScore> = 
+    let results: HashMap<String, SinglePlayerScore> =
         evaluator.evaluate("path_to_agents_directory", tournament)?;
 
     // Sort and display scores
     let mut sorted = results.iter().collect::<Vec<_>>();
     sorted.sort_by(|a, b| b.1.cmp(a.1));
     for (agent_name, score) in sorted {
-        println!("{agent_name}: {score}");
+        println!("{agent_name}: {score:?}");
     }
 
     Ok(())
