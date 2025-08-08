@@ -83,18 +83,22 @@ pub fn wait_for_process_cleanup(
     Ok(())
 }
 
-pub fn create_process_in_cgroup(
-    command: &str,
-    args: &[String],
-    group: &cgroups_rs::Cgroup,
-) -> anyhow::Result<std::process::Child> {
-    let mut child = std::process::Command::new(command)
+fn create_process(command: &str, args: &[String]) -> anyhow::Result<Child> {
+    std::process::Command::new(command)
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .with_context(|| format!("command '{command}' not found"))?;
+        .with_context(|| format!("command '{command}' not found"))
+}
+
+pub fn create_process_in_cgroup(
+    command: &str,
+    args: &[String],
+    group: &cgroups_rs::Cgroup,
+) -> anyhow::Result<std::process::Child> {
+    let mut child = create_process(command, args)?;
 
     let pid = child.id() as u64;
     let addition = group.add_task_by_tgid(cgroups_rs::CgroupPid { pid });
@@ -117,7 +121,7 @@ pub fn create_process_in_cgroup(
 #[derive(Debug)]
 pub struct LimitedProcess {
     pub child: Child,
-    cgroup: Cgroup,
+    cgroup: Option<Cgroup>,
     cleaned_up: bool,
 }
 
@@ -145,18 +149,36 @@ impl LimitedProcess {
 
         Ok(LimitedProcess {
             child,
-            cgroup: group,
+            cgroup: Some(group),
             cleaned_up: false,
         })
     }
 
     pub fn try_kill(&mut self, max_duration: Duration) -> anyhow::Result<()> {
-        self.cgroup.kill().context("could not kill process")?;
-        wait_for_process_cleanup(&self.cgroup, self.child.id() as u64, max_duration)
-            .context("process cleanup timed out")?;
-        self.cgroup.delete().context("could not cleanup cgroup")?;
-        self.cleaned_up = true;
-        Ok(())
+        match &mut self.cgroup {
+            Some(cgroup) => {
+                cgroup.kill().context("could not kill process")?;
+                wait_for_process_cleanup(&cgroup, self.child.id() as u64, max_duration)
+                    .context("process cleanup timed out")?;
+                cgroup.delete().context("could not cleanup cgroup")?;
+                self.cleaned_up = true;
+                Ok(())
+            }
+            None => self.child.kill().context("could not kill process"),
+        }
+    }
+
+    pub fn launch_without_container(
+        command: &str,
+        args: &[String],
+    ) -> anyhow::Result<LimitedProcess> {
+        let child = create_process(command, args).context("could not create process")?;
+
+        Ok(LimitedProcess {
+            child,
+            cgroup: None,
+            cleaned_up: false,
+        })
     }
 }
 
@@ -164,12 +186,13 @@ impl Drop for LimitedProcess {
     fn drop(&mut self) {
         static CLEANUP_DURATION: Duration = Duration::from_millis(10);
         if !self.cleaned_up {
-            warn!(
-                "Process {} was not cleaned up before dropping. Trying to clean up for up to {:?}...",
-                self.child.id(),
-                CLEANUP_DURATION
-            );
-            let _ = self.try_kill(CLEANUP_DURATION);
+            // warn!(
+            //     "Process {} was not cleaned up before dropping. Trying to clean up for up to {:?}...",
+            //     self.child.id(),
+            //     CLEANUP_DURATION
+            // );
+            self.try_kill(CLEANUP_DURATION)
+                .expect("could not kill process/cgroup on LimitedProcess::drop");
         }
     }
 }
