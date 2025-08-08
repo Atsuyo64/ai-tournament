@@ -77,6 +77,7 @@ pub fn compile_single_agent(dir: &DirEntry) -> Result<PathBuf, String> {
     let output = proc.wait_with_output().expect("failed to wait on child");
     if output.status.success() {
         let path = dir.path().join("target/release/").join(BIN_NAME);
+        //FIXME: on Windows: BIN_NAME.join(".exe") or something link that
         Ok(path)
     } else {
         Err(format!(
