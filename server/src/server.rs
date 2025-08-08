@@ -166,11 +166,11 @@ where
         }
         drop(guard);
 
-        let verbose = self.config.verbose;
+        let config = self.config;
         std::thread::spawn(move || {
-            let result = run_match(match_settings.clone(), game);
+            let result = run_match(match_settings.clone(), config, game);
 
-            if verbose {
+            if config.verbose {
                 print_runner_result(&match_settings, &result);
             }
             Self::remove_running_match(&mutex, &match_settings);

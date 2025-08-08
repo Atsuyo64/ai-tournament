@@ -3,7 +3,10 @@ use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc, time::Dur
 use agent_interface::Game;
 use tracing::{info, instrument, trace, warn};
 
-use crate::{agent::Agent, client_handler::ClientHandler, constraints::Constraints};
+use crate::{
+    agent::Agent, client_handler::ClientHandler, configuration::Configuration,
+    constraints::Constraints,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MatchSettings {
@@ -34,7 +37,11 @@ pub struct RunnerResult {
 }
 
 #[instrument(skip_all,fields(VS=settings.to_string()))]
-pub fn run_match<G: Game>(settings: MatchSettings, mut game: G) -> RunnerResult
+pub fn run_match<G: Game>(
+    settings: MatchSettings,
+    config: Configuration,
+    mut game: G,
+) -> RunnerResult
 where
     G::Action: FromStr + ToString,
     G::State: ToString,
@@ -56,7 +63,11 @@ where
         let ram = resources.agent_ram;
         let mut avail_res = resources.clone();
         for (i, agent) in ordered_player.iter().enumerate() {
-            match ClientHandler::init(agent.clone(), &avail_res.take(num_cpus, ram)) {
+            match ClientHandler::init(
+                agent.clone(),
+                &avail_res.take(num_cpus, ram),
+                config.allow_uncontained,
+            ) {
                 Ok(client) => {
                     clients.insert(i, client);
                 }

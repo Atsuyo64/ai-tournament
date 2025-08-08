@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, bail, Context};
 use cgroup_manager::LimitedProcess;
 use tracing::{error, instrument};
 
@@ -15,6 +15,7 @@ use crate::constraints::Constraints;
 pub struct ClientHandler {
     stream: TcpStream,
     process: LimitedProcess,
+    // config: Configuration,
 }
 
 impl ClientHandler {
@@ -24,7 +25,11 @@ impl ClientHandler {
     ///
     /// Child process is killed on drop. Child process's cgroup is cleaned up on drop.
     #[instrument(skip_all,fields(Agent=agent.name))]
-    pub fn init(agent: Arc<Agent>, resources: &Constraints) -> anyhow::Result<ClientHandler> {
+    pub fn init(
+        agent: Arc<Agent>,
+        resources: &Constraints,
+        allow_uncontained: bool,
+    ) -> anyhow::Result<ClientHandler> {
         assert_eq!(
             resources.total_ram, resources.agent_ram,
             "incorrect ram to launch agent"
@@ -34,6 +39,11 @@ impl ClientHandler {
             resources.cpus_per_agent,
             "incorrect cpus to launch agents"
         );
+
+        static HAVE_TASKSET: std::sync::LazyLock<bool> =
+            std::sync::LazyLock::new(ClientHandler::test_taskset);
+        static HAVE_CGROUPS_V2: std::sync::LazyLock<bool> =
+            std::sync::LazyLock::new(ClientHandler::test_cgroups);
 
         // return early if agent has no binary
         let path = agent
@@ -48,28 +58,50 @@ impl ClientHandler {
             .context("server error: could not create TcpListener")?;
         let port_arg = listener.local_addr()?.port().to_string();
 
-        // trace!("launching client");
-
+        let max_memory = resources.total_ram;
         let cpus = resources
             .cpus
             .iter()
             .map(u8::to_string)
             .collect::<Vec<_>>()
             .join(",");
-        let mut full_command = vec![
-            "taskset".to_string(),
-            "-c".to_string(),
-            cpus.clone(),
-            path,
-            port_arg,
-        ]
-        .into_iter();
+
+        if !*HAVE_TASKSET && !allow_uncontained {
+            bail!(
+                "taskset {}unavailable. Consider setting allow_uncontained to true.",
+                if *HAVE_CGROUPS_V2 {
+                    ""
+                } else {
+                    "and cgroups v2 "
+                }
+            );
+        }
+
+        if !*HAVE_CGROUPS_V2 && !allow_uncontained {
+            bail!("cgroups v2 unavailable. Consider setting allow_uncontained to true");
+        }
+
+        let mut full_command = if *HAVE_TASKSET {
+            vec![
+                "taskset".to_string(),
+                "-c".to_string(),
+                cpus.clone(),
+                path,
+                port_arg,
+            ]
+            .into_iter()
+        } else {
+            vec![path, port_arg].into_iter()
+        };
         let command = full_command.next().unwrap();
         let args = full_command.collect::<Vec<_>>();
-        let max_memory = resources.total_ram;
 
-        let mut process = LimitedProcess::launch(&command, &args, max_memory as i64, &cpus)
-            .context("server error: child + cgroup creation failed")?;
+        let mut process = if *HAVE_CGROUPS_V2 {
+            LimitedProcess::launch(&command, &args, max_memory as i64, &cpus)
+                .context("server error: child + cgroup creation failed")?
+        } else {
+            LimitedProcess::launch_without_container(&command, &args)?
+        };
 
         listener
             .set_nonblocking(true)
@@ -78,7 +110,11 @@ impl ClientHandler {
         let response_timeout = Instant::now() + Self::RESPONSE_TIMEOUT_DURATION;
         while Instant::now() < response_timeout {
             if let Ok((stream, _addr)) = listener.accept() {
-                return Ok(ClientHandler { stream, process });
+                return Ok(ClientHandler {
+                    stream,
+                    process,
+                    // config,
+                });
             }
             // at least 10 tries
             thread::sleep(Duration::from_millis(10).min(Self::RESPONSE_TIMEOUT_DURATION / 10));
@@ -140,6 +176,30 @@ impl ClientHandler {
 
     fn kill_child_process(&mut self) -> anyhow::Result<()> {
         self.process.try_kill(Duration::from_secs(1))
+    }
+
+    fn test_taskset() -> bool {
+        match std::process::Command::new("taskset").arg("-V").output() {
+            Ok(_) => true,
+            Err(_) => false,
+        }
+    }
+
+    #[cfg(unix)]
+    fn test_cgroups() -> bool {
+        match LimitedProcess::launch("pwd", &[], 1000, "0") {
+            Ok(mut p) => {
+                let _ = p.child.wait();
+                let _ = p.try_kill(Duration::from_secs(1));
+                true
+            }
+            Err(_) => false,
+        }
+    }
+
+    #[cfg(not(unix))]
+    fn test_cgroups() -> bool {
+        false
     }
 }
 

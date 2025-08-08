@@ -51,7 +51,9 @@ fn launch_dummy() {
         .build()
         .unwrap();
 
-    let config = Configuration::new().with_verbose(false);
+    let config = Configuration::new()
+        .with_verbose(true)
+        .with_allow_uncontained(true);
 
     let evaluator = Evaluator::new(DummyFactory {}, config, params);
     let path = "tests/dummy_agents";

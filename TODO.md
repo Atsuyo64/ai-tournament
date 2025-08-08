@@ -7,9 +7,9 @@
 - [x] apply restrictions to agents
 - [x] collect scores
 - [x] collect scores nicely
-- [ ] create lots of agents with strange behaviour
+- [x] create lots of agents with strange behaviour
 - [x] format final scores
-- [ ] design config file for agents (2 parts : tested agent config<u>s</u> for students + "main" config for evaluation (server-side))
+- [x] design config file for agents (2 parts : tested agent config<u>s</u> for students + "main" config for evaluation (server-side))
 - [ ] parse config file (first: main config only)
 - [ ] init agent with arguments (clap) data (where to get argument data?)
 - [x] read about different tournaments systems
@@ -20,12 +20,15 @@
 - [x] Check if agents can overflow their piped IO-Buffers
 - [ ] Agent Launcher "trait" => either exe or object
 - [x] Update Game trait
-- [ ] option to disable print/ANSI
+- [x] option to disable print
+- [ ] option to disable ANSI
 - [ ] swiss option: 'match-per-confrontation'
 - [ ] swiss prevent playing against same adversary
 - [ ] swiss prevent double bye
 - [ ] merging interface and cgroup manager into server ?
 - [ ] renaming server
-- [ ] README + entry documentation
+- [x] README + entry documentation
 - [ ] log all matches to a file
 - [ ] cli args with clap (or other)
+- [x] cgroup + taskset fallback
+- [ ] test on Windows
