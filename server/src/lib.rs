@@ -153,3 +153,22 @@ mod match_runner;
 pub mod server;
 mod tournament;
 pub mod tournament_strategy;
+
+/// Commonly used types and traits for quick access.
+///
+/// Import this prelude to get started easily:
+/// ```rust
+/// use server::prelude::*;
+/// ```
+///
+/// Includes:
+/// - [`Configuration`](crate::configuration::Configuration)
+/// - [`ConstraintsBuilder`](crate::constraints::ConstraintsBuilder)
+/// - [`Evaluator`](crate::server::Evaluator)
+/// - all bult-in [`Tournament strategies`](crate::tournament_strategy)
+pub mod prelude {
+    pub use crate::configuration::Configuration;
+    pub use crate::constraints::ConstraintsBuilder;
+    pub use crate::server::Evaluator;
+    pub use crate::tournament_strategy::*;
+}
