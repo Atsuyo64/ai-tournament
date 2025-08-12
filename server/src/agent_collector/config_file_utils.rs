@@ -1,16 +1,19 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{bail, Context};
 
 pub fn get_all_configs(dir: &PathBuf) -> anyhow::Result<HashMap<String, String>> {
-    let config_file = collect_pair(dir)?.1;
+    let config_file = collect_yaml(dir)?;
     let yaml = std::fs::read_to_string(config_file)?;
     let full_config = parse_yaml(&yaml)?;
     Ok(full_config.configs)
 }
 
 pub fn get_eval_config(dir: &PathBuf) -> anyhow::Result<String> {
-    let config_file = collect_pair(dir)?.1;
+    let config_file = collect_yaml(dir)?;
     let yaml = std::fs::read_to_string(config_file)?;
     let full_config = parse_yaml(&yaml)?;
     let config_name = &full_config.eval;
@@ -90,49 +93,86 @@ fn parse_yaml(yaml: &str) -> anyhow::Result<ConfigFile> {
     Ok(ConfigFile { eval, configs })
 }
 
-pub(super) fn collect_pair(dir: &Path) -> anyhow::Result<(PathBuf, PathBuf)> {
-    let mut result: (PathBuf, PathBuf) = Default::default();
-
+pub(super) fn check_dir_integrity(dir: &Path) -> anyhow::Result<()> {
     let Ok(metadata) = dir.metadata() else {
         bail!("error reading directory: {}", dir.metadata().unwrap_err());
     };
     if !metadata.is_dir() {
         bail!("not a directory");
     }
-    let Ok(entries) = std::fs::read_dir(dir) else {
+    let Ok(_) = std::fs::read_dir(dir) else {
         bail!("error reading directory");
     };
-    let cnt = entries.count();
-    if cnt != 2 {
-        bail!("directory contains {cnt} elements instead of 2");
-    }
+    Ok(())
+}
 
-    let entries = std::fs::read_dir(dir).unwrap();
-    let mut found = 0;
-    for entry in entries {
+fn collect_yaml(dir: &Path) -> anyhow::Result<PathBuf> {
+    check_dir_integrity(dir)?;
+
+    let mut result: Option<PathBuf> = None;
+    // Safety: `check_dir_integrity` tested that read_dir is ok
+    for entry in std::fs::read_dir(dir).unwrap() {
         let Ok(entry) = entry else {
-            bail!("one entry cannot be read in directory");
+            continue;
         };
         let Ok(metadata) = entry.metadata() else {
             continue;
         };
         if !metadata.is_file() {
-            bail!("{:?} is not a file", entry.file_name());
+            continue;
         }
         let Ok(name) = entry.file_name().into_string() else {
             bail!("name error: {:?}", entry.file_name());
         };
         if name.ends_with(".yml") || name.ends_with(".yaml") {
-            found |= 2;
-            result.1 = entry.path();
-        } else {
-            found |= 1;
-            result.0 = entry.path();
+            if result.is_some() {
+                bail!(
+                    "two YAML files found: {} and {name}",
+                    result.unwrap().to_str().unwrap()
+                );
+            }
+            result = Some(entry.path());
         }
     }
-    if found == 0b11 {
-        Ok(result)
-    } else {
-        bail!("missing directory directory content")
-    }
+    result.context("YAML not found")
 }
+
+// pub(super) fn collect_pair(dir: &Path) -> anyhow::Result<(PathBuf, PathBuf)> {
+//     let mut result: (PathBuf, PathBuf) = Default::default();
+//
+//     check_dir_integrity(dir)?;
+//
+//     let cnt = entries.count();
+//     if cnt != 2 {
+//         bail!("directory contains {cnt} elements instead of 2");
+//     }
+//
+//     let entries = std::fs::read_dir(dir).unwrap();
+//     let mut found = 0;
+//     for entry in entries {
+//         let Ok(entry) = entry else {
+//             bail!("one entry cannot be read in directory");
+//         };
+//         let Ok(metadata) = entry.metadata() else {
+//             continue;
+//         };
+//         if !metadata.is_file() {
+//             bail!("{:?} is not a file", entry.file_name());
+//         }
+//         let Ok(name) = entry.file_name().into_string() else {
+//             bail!("name error: {:?}", entry.file_name());
+//         };
+//         if name.ends_with(".yml") || name.ends_with(".yaml") {
+//             found |= 2;
+//             result.1 = entry.path();
+//         } else {
+//             found |= 1;
+//             result.0 = entry.path();
+//         }
+//     }
+//     if found == 0b11 {
+//         Ok(result)
+//     } else {
+//         bail!("missing directory directory content")
+//     }
+// }

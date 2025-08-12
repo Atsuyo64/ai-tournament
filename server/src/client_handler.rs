@@ -29,6 +29,7 @@ impl ClientHandler {
         agent: Arc<Agent>,
         resources: &Constraints,
         allow_uncontained: bool,
+        debug_process_stderr: bool,
     ) -> anyhow::Result<ClientHandler> {
         assert_eq!(
             resources.total_ram, resources.agent_ram,
@@ -89,18 +90,30 @@ impl ClientHandler {
                 path,
                 port_arg,
             ]
-            .into_iter()
         } else {
-            vec![path, port_arg].into_iter()
+            vec![path, port_arg]
         };
+
+        // append agent's arguments (from config file) to the args
+        if let Some(args) = &agent.args {
+            full_command.extend_from_slice(args);
+        }
+        let mut full_command = full_command.into_iter();
+
         let command = full_command.next().unwrap();
         let args = full_command.collect::<Vec<_>>();
 
         let mut process = if *HAVE_CGROUPS_V2 {
-            LimitedProcess::launch(&command, &args, max_memory as i64, &cpus)
-                .context("server error: child + cgroup creation failed")?
+            LimitedProcess::launch(
+                &command,
+                &args,
+                max_memory as i64,
+                &cpus,
+                debug_process_stderr,
+            )
+            .context("server error: child + cgroup creation failed")?
         } else {
-            LimitedProcess::launch_without_container(&command, &args)?
+            LimitedProcess::launch_without_container(&command, &args, debug_process_stderr)?
         };
 
         listener
@@ -187,7 +200,7 @@ impl ClientHandler {
 
     #[cfg(unix)]
     fn test_cgroups() -> bool {
-        match LimitedProcess::launch("pwd", &[], 1000, "0") {
+        match LimitedProcess::launch("pwd", &[], 1000, "0", false) {
             Ok(mut p) => {
                 let _ = p.child.wait();
                 let _ = p.try_kill(Duration::from_secs(1));

@@ -6,7 +6,10 @@ use std::{
 
 use anyhow::bail;
 
-use crate::{agent::Agent, configuration::Configuration};
+use crate::{
+    agent::Agent, agent_collector::config_file_utils::check_dir_integrity,
+    configuration::Configuration,
+};
 
 mod agent_compiler;
 
@@ -152,8 +155,32 @@ pub fn collect_agents(
     Ok(vec)
 }
 
-fn collect_binary(dir: &PathBuf) -> Result<PathBuf, String> {
-    config_file_utils::collect_pair(dir)
-        .map(|(exe, _yaml)| exe)
-        .map_err(|e| format!("{e}"))
+fn collect_binary(dir: &PathBuf) -> anyhow::Result<PathBuf> {
+    check_dir_integrity(dir)?;
+
+    // Safety: `check_dir_integrity` should have checked that read_dir is ok
+    let cnt = std::fs::read_dir(dir).unwrap().count();
+    if cnt != 2 {
+        bail!("directory contains {cnt} elements instead of 2");
+    }
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let Ok(entry) = entry else {
+            bail!("one entry cannot be read in directory");
+        };
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        if !metadata.is_file() {
+            bail!("{:?} is not a file", entry.file_name());
+        }
+        let Ok(name) = entry.file_name().into_string() else {
+            bail!("name error: {:?}", entry.file_name());
+        };
+        if name.ends_with(".yml") || name.ends_with(".yaml") {
+            continue;
+        } else {
+            return Ok(entry.path());
+        }
+    }
+    bail!("binary not found")
 }

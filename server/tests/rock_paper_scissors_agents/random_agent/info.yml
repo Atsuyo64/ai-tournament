@@ -1,0 +1,7 @@
+
+
+eval:   my_config   
+configs: 
+  - config_1:"hello world!"
+    - config2: "not\ one\ argument"
+ - my_config: "absolutely useless args"

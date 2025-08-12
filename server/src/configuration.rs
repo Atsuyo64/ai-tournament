@@ -9,6 +9,7 @@ pub struct Configuration {
     pub(crate) compile_agents: bool,
     pub(crate) self_test: bool,
     pub(crate) test_all_configs: bool,
+    pub(crate) debug_agent_stderr: bool,
 }
 
 impl Configuration {
@@ -21,6 +22,7 @@ impl Configuration {
     /// - Agents will be compiled before execution.
     /// - Self-test mode is disabled (expects multiple agents).
     /// - Only the 'eval' configuration will be tested.
+    /// - Agent stderr output is disabled
     pub fn new() -> Self {
         Self {
             verbose: true,
@@ -29,6 +31,7 @@ impl Configuration {
             compile_agents: true,
             self_test: false,
             test_all_configs: false,
+            debug_agent_stderr: false, // default value
         }
     }
 
@@ -78,6 +81,12 @@ impl Configuration {
     /// more informations)
     pub fn with_test_all_configs(mut self, value: bool) -> Self {
         self.test_all_configs = value;
+        self
+    }
+
+    /// Enable or disable agent stderr output (debug purposes only).
+    pub fn with_debug_agent_stderr(mut self, value: bool) -> Self {
+        self.debug_agent_stderr = value;
         self
     }
 }

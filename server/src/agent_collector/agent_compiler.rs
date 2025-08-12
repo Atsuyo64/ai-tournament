@@ -2,7 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-pub fn compile_single_agent(dir: &Path) -> Result<PathBuf, String> {
+use anyhow::bail;
+
+pub fn compile_single_agent(dir: &Path) -> anyhow::Result<PathBuf> {
     const BIN_NAME: &str = "eval";
     //TODO: check crates used ? (list "abnormal" crates)
     //TODO: --offline to prevent using other crates than expected ?
@@ -29,15 +31,14 @@ pub fn compile_single_agent(dir: &Path) -> Result<PathBuf, String> {
         //FIXME: on Windows: BIN_NAME.join(".exe") or something link that
         Ok(path)
     } else {
-        Err(format!(
+        bail!(
             "Compilation error: {}",
-            // output.status.code().unwrap(),
             std::str::from_utf8(&output.stderr)
                 .unwrap()
                 .trim()
                 .split("\n")
                 .next()
                 .unwrap_or_default(),
-        ))
+        )
     }
 }

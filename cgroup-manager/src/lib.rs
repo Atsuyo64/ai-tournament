@@ -82,13 +82,13 @@ pub fn wait_for_process_cleanup(
     Ok(())
 }
 
-fn create_process(command: &str, args: &[String]) -> anyhow::Result<Child> {
-    std::process::Command::new(command)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
+fn create_process(command: &str, args: &[String], allow_stderr: bool) -> anyhow::Result<Child> {
+    let mut cmd = std::process::Command::new(command);
+    cmd.args(args).stdin(Stdio::null()).stdout(Stdio::null());
+    if !allow_stderr {
+        cmd.stderr(Stdio::null());
+    }
+    cmd.spawn()
         .with_context(|| format!("command '{command}' not found"))
 }
 
@@ -96,8 +96,9 @@ pub fn create_process_in_cgroup(
     command: &str,
     args: &[String],
     group: &cgroups_rs::Cgroup,
+    allow_stderr: bool,
 ) -> anyhow::Result<std::process::Child> {
-    let mut child = create_process(command, args)?;
+    let mut child = create_process(command, args, allow_stderr)?;
 
     let pid = child.id() as u64;
     let addition = group.add_task_by_tgid(cgroups_rs::CgroupPid { pid });
@@ -130,6 +131,7 @@ impl LimitedProcess {
         args: &[String],
         max_memory: i64,
         cpus: &str,
+        allow_stderr: bool,
     ) -> anyhow::Result<LimitedProcess> {
         static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1); // lazy cell ? (if multiple evaluations at the same time !)
         let user_id = get_current_user_id().context("could not get user id")?;
@@ -141,10 +143,11 @@ impl LimitedProcess {
         let path = get_cgroup_path(&user_id, &group_name);
         let group =
             create_cgroup(&path, max_memory, 100, cpus).context("could not create cgroup")?;
-        let child = create_process_in_cgroup(command, args, &group).with_context(|| {
-            let _ = group.delete();
-            "could not create process in cgroup"
-        })?;
+        let child =
+            create_process_in_cgroup(command, args, &group, allow_stderr).with_context(|| {
+                let _ = group.delete();
+                "could not create process in cgroup"
+            })?;
 
         Ok(LimitedProcess {
             child,
@@ -170,8 +173,10 @@ impl LimitedProcess {
     pub fn launch_without_container(
         command: &str,
         args: &[String],
+        allow_stderr: bool,
     ) -> anyhow::Result<LimitedProcess> {
-        let child = create_process(command, args).context("could not create process")?;
+        let child =
+            create_process(command, args, allow_stderr).context("could not create process")?;
 
         Ok(LimitedProcess {
             child,

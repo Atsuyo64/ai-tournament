@@ -67,6 +67,7 @@ where
                 agent.clone(),
                 &avail_res.take(num_cpus, ram),
                 config.allow_uncontained,
+                config.debug_agent_stderr,
             ) {
                 Ok(client) => {
                     clients.insert(i, client);
