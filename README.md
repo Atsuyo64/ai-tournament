@@ -45,12 +45,7 @@ See [`server/README.md`](server/README.md) for details on the main crate.
 
 ```rust
 use anyhow;
-use server::{
-    configuration::Configuration,
-    constraints::ConstraintsBuilder,
-    server::Evaluator,
-    tournament_strategy::{SinglePlayerScore, SinglePlayerTournament},
-};
+use server::prelude::*;
 use std::{collections::HashMap, time::Duration};
 
 // Your custom game implementing the Game + GameFactory traits
