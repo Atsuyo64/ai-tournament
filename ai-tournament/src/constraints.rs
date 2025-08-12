@@ -27,7 +27,7 @@
 //!
 //! ```no_run
 //! use std::time::Duration;
-//! use server::constraints::ConstraintsBuilder;
+//! use ai_tournament::constraints::ConstraintsBuilder;
 //!
 //! let constraints = ConstraintsBuilder::new()
 //!     .with_max_total_ram(16_000)
@@ -70,7 +70,7 @@ enum AutoCpus {
 ///
 /// ```
 /// # use std::time::Duration;
-/// # use server::constraints::ConstraintsBuilder;
+/// # use ai_tournament::constraints::ConstraintsBuilder;
 ///
 /// let constraints = ConstraintsBuilder::new()
 ///     .with_max_total_ram(16_000)

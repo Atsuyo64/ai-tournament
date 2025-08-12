@@ -19,6 +19,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ai-tournament"
+version = "0.1.0"
+dependencies = [
+ "agent-interface",
+ "anyhow",
+ "cgroup-manager",
+ "cgroups-rs",
+ "num_cpus",
+ "sysinfo",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -223,20 +237,6 @@ name = "regex-syntax"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
-
-[[package]]
-name = "server"
-version = "0.1.0"
-dependencies = [
- "agent-interface",
- "anyhow",
- "cgroup-manager",
- "cgroups-rs",
- "num_cpus",
- "sysinfo",
- "tracing",
- "tracing-subscriber",
-]
 
 [[package]]
 name = "sharded-slab"

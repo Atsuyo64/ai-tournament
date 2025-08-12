@@ -1,7 +1,10 @@
 [package]
-name = "server"
-version = "0.1.0"
+authors = ["Atsuyo64"]
+description = "A modular Rust crate for running AI tournament"
 edition = "2021"
+name = "ai-tournament"
+version = "0.1.0"
+rust-version = "1.84.1"
 
 [dependencies]
 agent-interface = { path = "../agent-interface" }

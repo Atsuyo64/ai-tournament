@@ -10,8 +10,8 @@
 - [x] create lots of agents with strange behaviour
 - [x] format final scores
 - [x] design config file for agents (2 parts : tested agent config<u>s</u> for students + "main" config for evaluation (server-side))
-- [ ] parse config file (first: main config only)
-- [ ] init agent with arguments (clap) data (where to get argument data?)
+- [x] parse config file (first: main config only)
+- [x] init agent with arguments (clap) data (where to get argument data?)
 - [x] read about different tournaments systems
 - [ ] implement smarter tournaments systems REVIEW: continuous evaluation? periodic reset?
 - [x] tournament iterator should check constraints
@@ -26,7 +26,7 @@
 - [ ] swiss prevent playing against same adversary
 - [ ] swiss prevent double bye
 - [ ] merging interface and cgroup manager into server ?
-- [ ] renaming server
+- [x] renaming server
 - [x] README + entry documentation
 - [ ] log all matches to a file
 - [ ] cli args with clap (or other)

@@ -1,4 +1,4 @@
-//! # AI Agent Evaluator – Server Crate
+//! # Ai Tournament
 //!
 //! A modular Rust crate system for evaluating AI agents via customizable tournaments, supporting sandboxed execution and flexible constraints.
 //!
@@ -26,7 +26,7 @@
 //! # impl YourGame {
 //! #     pub fn new() -> YourGame { YourGame }
 //! # }
-//! # impl server::Game for YourGame {
+//! # impl ai_tournament::Game for YourGame {
 //! #     type State = u32;
 //! #     type Action = u32;
 //! #     fn apply_action(&mut self, _action: &Option<Self::Action>) -> anyhow::Result<()> { Ok(()) }
@@ -35,17 +35,12 @@
 //! #     fn is_finished(&self) -> bool { true }
 //! #     fn get_player_score(&self, _player_number: u32) -> f32 { 0.0 }
 //! # }
-//! # impl server::GameFactory<YourGame> for YourGame {
+//! # impl ai_tournament::GameFactory<YourGame> for YourGame {
 //! #     fn new_game(&self) -> YourGame { YourGame }
 //! # }
 //! use std::{collections::HashMap, time::Duration};
 //! use anyhow;
-//! use server::{
-//!     constraints::ConstraintsBuilder,
-//!     configuration::Configuration,
-//!     server::Evaluator,
-//!     tournament_strategy::{SinglePlayerScore, SinglePlayerTournament},
-//! };
+//! use ai_tournament::prelude::*;
 //!
 //! fn main() -> anyhow::Result<()> {
 //!     // Define per-agent constraints
@@ -88,7 +83,7 @@
 //! #     pub fn select_action(&mut self, _action: u32) -> u32 { 0 }
 //! # }
 //! # struct YourGame;
-//! # impl server::Game for YourGame {
+//! # impl ai_tournament::Game for YourGame {
 //! #     type State = u32;
 //! #     type Action = u32;
 //! #     fn apply_action(&mut self, _action: &Option<Self::Action>) -> anyhow::Result<()> { Ok(()) }
@@ -106,7 +101,7 @@
 //!
 //! use anyhow;
 //!
-//! use server::Game;
+//! use ai_tournament::Game;
 //!
 //! fn main() -> anyhow::Result<()> {
 //!     let mut args = env::args();
@@ -158,7 +153,7 @@ pub mod tournament_strategy;
 ///
 /// Import this prelude to get started easily:
 /// ```rust
-/// use server::prelude::*;
+/// use ai_tournament::prelude::*;
 /// ```
 ///
 /// Includes:

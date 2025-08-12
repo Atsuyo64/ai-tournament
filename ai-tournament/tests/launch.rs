@@ -1,9 +1,6 @@
 use crate::games::{DummyFactory, RPSWrapper};
-use ::server::{constraints::ConstraintsBuilder, server::Evaluator};
-use server::{
-    configuration::Configuration,
-    tournament_strategy::{SinglePlayerTournament, SwissTournament},
-};
+
+use ai_tournament::prelude::*;
 use std::{str::FromStr, time::Duration};
 use tracing::{Level, Metadata};
 use tracing_subscriber::{
