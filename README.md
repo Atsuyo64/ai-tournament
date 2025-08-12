@@ -45,7 +45,7 @@ See [`server/README.md`](server/README.md) for details on the main crate.
 
 ```rust
 use anyhow;
-use server::prelude::*;
+use ai_tournament::prelude::*;
 use std::{collections::HashMap, time::Duration};
 
 // Your custom game implementing the Game + GameFactory traits
