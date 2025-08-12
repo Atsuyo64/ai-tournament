@@ -1,7 +1,7 @@
 [package]
 name = "rocky_agent"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 agent-interface = { path = "../../../../agent-interface" }
