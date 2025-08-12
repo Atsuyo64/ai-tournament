@@ -196,14 +196,6 @@ impl TournamentStrategy for SwissTournament {
         pending
     }
 
-    // fn get_pending_tuples(&mut self) -> Vec<Vec<Arc<Agent>>> {
-    //     std::mem::take(&mut self.pending)
-    // }
-
-    // fn is_complete(&self) -> bool {
-    //     self.round >= self.max_rounds && self.pending.is_empty()
-    // }
-
     fn players_per_match(&self) -> usize {
         2
     }
@@ -301,14 +293,6 @@ impl TournamentStrategy for RoundRobinTournament {
         pending
     }
 
-    // fn get_pending_tuples(&mut self) -> Vec<Vec<Arc<Agent>>> {
-    //     std::mem::take(&mut self.pending)
-    // }
-
-    // fn is_complete(&self) -> bool {
-    //     self.pending.is_empty()
-    // }
-
     fn players_per_match(&self) -> usize {
         2
     }
@@ -382,14 +366,6 @@ impl TournamentStrategy for SinglePlayerTournament {
         }
         pending
     }
-
-    // fn get_pending_tuples(&mut self) -> Vec<Vec<Arc<Agent>>> {
-    //     std::mem::take(&mut self.pending)
-    // }
-
-    // fn is_complete(&self) -> bool {
-    //     self.pending.is_empty()
-    // }
 
     fn players_per_match(&self) -> usize {
         1

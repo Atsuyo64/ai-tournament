@@ -10,8 +10,7 @@
 //!
 //! See crate-level documentation for an example on how to use the `Evaluator`.
 
-use crate::agent::Agent;
-use crate::agent_compiler;
+use crate::agent_collector::collect_agents;
 use crate::configuration::Configuration;
 use crate::constraints::Constraints;
 use crate::match_runner::{run_match, MatchSettings, RunnerResult};
@@ -19,7 +18,6 @@ use crate::tournament::TournamentScheduler;
 use crate::tournament_strategy::TournamentStrategy;
 
 use agent_interface::{Game, GameFactory};
-use anyhow::bail;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
@@ -84,7 +82,7 @@ where
         Self::setup_panic_hook();
 
         // 2. get agents name & code in *directory*
-        let agents = self.collect_agents(directory.as_ref())?;
+        let agents = collect_agents(directory.as_ref(), self.config)?;
 
         // 3. add agents to tournament
         tournament.add_agents(agents);
@@ -117,16 +115,6 @@ where
             orig_hook(panic_info);
             std::process::exit(1);
         }));
-    }
-
-    fn collect_agents(&self, directory: &std::path::Path) -> anyhow::Result<Vec<Arc<Agent>>> {
-        if !directory.is_dir() {
-            bail!("'{directory:?}' is not a valid directory");
-        }
-        Ok(agent_compiler::compile_all_agents(
-            directory,
-            self.config.verbose,
-        ))
     }
 
     fn launch_initial_matches<T: TournamentStrategy>(

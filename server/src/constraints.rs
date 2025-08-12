@@ -382,18 +382,4 @@ impl Constraints {
         let cpu = *self.cpus.iter().next().unwrap();
         self.cpus.take(&cpu).unwrap()
     }
-
-    // pub(crate) fn with_cpus_and_ram<I: IntoIterator<Item = u8>>(
-    //     cpus: I,
-    //     ram: usize,
-    // ) -> Constraints {
-    //     Constraints {
-    //         total_ram: ram,
-    //         agent_ram: 0,
-    //         cpus: cpus.into_iter().collect(),
-    //         cpus_per_agent: 1,
-    //         time_budget: Duration::MAX,
-    //         action_time: Duration::MAX,
-    //     }
-    // }
 }

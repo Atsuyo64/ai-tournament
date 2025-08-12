@@ -179,10 +179,10 @@ impl ClientHandler {
     }
 
     fn test_taskset() -> bool {
-        match std::process::Command::new("taskset").arg("-V").output() {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        std::process::Command::new("taskset")
+            .arg("-V")
+            .output()
+            .is_ok()
     }
 
     #[cfg(unix)]

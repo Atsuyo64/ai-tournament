@@ -144,7 +144,7 @@
 
 pub use agent_interface::{anyhow, Game, GameFactory};
 mod agent;
-mod agent_compiler;
+mod agent_collector;
 mod client_handler;
 pub mod configuration;
 mod confrontation;

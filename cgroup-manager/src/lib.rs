@@ -157,7 +157,7 @@ impl LimitedProcess {
         match &mut self.cgroup {
             Some(cgroup) => {
                 cgroup.kill().context("could not kill process")?;
-                wait_for_process_cleanup(&cgroup, self.child.id() as u64, max_duration)
+                wait_for_process_cleanup(cgroup, self.child.id() as u64, max_duration)
                     .context("process cleanup timed out")?;
                 cgroup.delete().context("could not cleanup cgroup")?;
                 self.cleaned_up = true;

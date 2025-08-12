@@ -6,63 +6,6 @@ use std::collections::HashMap;
 use std::mem;
 use std::sync::Arc;
 
-// #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-// pub struct ScoreKey(i32,i32); //score, tie breaker //NOTE: might change to u32
-
-// #[derive(Debug, Clone, Default)]
-// pub struct AgentScoreEntry {
-//     pub all_scores: Vec<f32>, // Win,Draw,Lose Enum ? Rank uint ?
-//     pub sum: f32,
-//     pub adversaries: std::collections::HashSet<Arc<Agent>>,
-// }
-
-// pub struct PrettyScore {
-//     pub win:u32,
-//     pub draw:u32,
-//     pub lose:u32,
-// }
-
-// impl Scores {
-//     pub fn init() -> Self {
-//         Scores(HashMap::new())
-//     }
-
-//     pub fn add_match_result<I: IntoIterator<Item = (Arc<Agent>, f32)>>(&mut self, score: I) {
-//         let mut participants = vec![];
-//         for (agent, score) in score {
-//             participants.push(agent.clone());
-//             let e = self.0.entry(agent).or_default();
-//             e.all_scores.push(score);
-//             e.sum += score;
-//         }
-//         for agent in participants.iter() {
-//             for participant in participants.iter() {
-//                 if agent != participant {
-//                     self.0.get_mut(agent).unwrap().adversaries.insert(participant.clone());
-//                 }
-//             }
-//         }
-//     }
-
-//     pub fn get_key(&self, agent: &Arc<Agent>) -> ScoreKey {
-//         if let Some(e) = self.0.get(agent) {
-//             let adv = e.adversaries.iter().filter_map(|a| self.0.get(a).map(|e|e.sum)).collect::<Vec<_>>();
-//             let min = adv.iter().fold(f32::MAX, |a, &b| a.min(b));
-//             let max = adv.iter().fold(f32::MIN, |a, &b| a.max(b));
-//             let adv_value = if adv.len() <= 1 { 0.0 } else { adv.iter().sum::<f32>() - min - max };
-//             let adv_score = (adv_value * 2.0)  as i32;
-//             let agent_score = (e.sum * 2.0) as i32;
-//             ScoreKey ( agent_score, adv_score )
-//         } else {
-//             ScoreKey ( 0, 0 )
-//         }
-//     }
-
-//     pub fn get_printable_score(&self, _agent: &Arc<Agent>) -> PrettyScore {
-//         todo!() //TODO:
-//     }
-// }
-
 pub struct TournamentScheduler<S: TournamentStrategy> {
     // pub agents: Vec<Arc<Agent>>,
     scores: Vec<MatchResult>,
