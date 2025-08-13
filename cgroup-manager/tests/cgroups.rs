@@ -66,36 +66,39 @@ fn test_create_process_in_cgroup() {
     if let Ok(mut child) = process {
         let pid = child.id() as u64;
         println!("Process {pid} created");
-        if let Err(e) = group.add_task_by_tgid(cgroups_rs::CgroupPid { pid }) {
-            println!("Could not add task to cgroup: {e}");
-        } else {
-            println!("Task added to cgroup");
-            println!("Waiting for response...");
-            // sleep for ...ms and then try get result ?
-            // BUT loss time if it finishes "early"
-            println!("Finished waiting");
-            let result = child.stdout.take();
-            let is_late_or_incorrect = match result {
-                Some(_answer) => {
-                    println!("The process responded on time and the response is acceptable");
-                    false
-                } // !is_answer_ok(answer)
-                None => {
-                    println!("Process is late !");
-                    true
-                }
-            };
-            if is_late_or_incorrect {
-                println!("Attempting to kill process");
-                // kill
-                group.kill().unwrap_or_else(|e| {
+        match group.add_task_by_tgid(cgroups_rs::CgroupPid { pid }) {
+            Err(e) => {
+                println!("Could not add task to cgroup: {e}");
+            }
+            _ => {
+                println!("Task added to cgroup");
+                println!("Waiting for response...");
+                // sleep for ...ms and then try get result ?
+                // BUT loss time if it finishes "early"
+                println!("Finished waiting");
+                let result = child.stdout.take();
+                let is_late_or_incorrect = match result {
+                    Some(_answer) => {
+                        println!("The process responded on time and the response is acceptable");
+                        false
+                    } // !is_answer_ok(answer)
+                    None => {
+                        println!("Process is late !");
+                        true
+                    }
+                };
+                if is_late_or_incorrect {
+                    println!("Attempting to kill process");
+                    // kill
+                    group.kill().unwrap_or_else(|e| {
                         println!("Could not kill process. Must wait 10s to let it \"die by itself\", to avoid error in cgroup.delete(). Error: {e}");
                         std::thread::sleep(Duration::from_secs(10));
                     });
-                wait_for_process_cleanup(&group, pid, Duration::from_millis(100))
-                    .unwrap_or_else(|e| println!("Process cleanup did not end well: {e}"));
-            } else {
-                // release (auto ?)
+                    wait_for_process_cleanup(&group, pid, Duration::from_millis(100))
+                        .unwrap_or_else(|e| println!("Process cleanup did not end well: {e}"));
+                } else {
+                    // release (auto ?)
+                }
             }
         }
     } else {
