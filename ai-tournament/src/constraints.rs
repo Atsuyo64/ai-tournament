@@ -89,6 +89,7 @@ pub struct ConstraintsBuilder {
     cpus_per_agent: Option<usize>,
     time_budget: Option<Duration>,
     action_time: Option<Duration>,
+    time_margin: Duration,
 }
 
 impl ConstraintsBuilder {
@@ -110,6 +111,7 @@ impl ConstraintsBuilder {
     /// - `CPUS_PER_AGENT` (usize): number of CPUs allowed per agent
     /// - `TIME_BUDGET_SECS` (u64): total time budget per agent in seconds
     /// - `ACTION_TIMEOUT_MS` (u64): timeout per action in milliseconds
+    /// - `TIME_MARGIN_MS` (u64): invisible margin in milliseconds added to all timeouts to prevent false timeouts
     #[must_use]
     pub fn from_env() -> Self {
         fn parse_usize(var: &str) -> Option<usize> {
@@ -139,6 +141,11 @@ impl ConstraintsBuilder {
         let cpus_per_agent = parse_usize("CPUS_PER_AGENT");
         let time_budget = parse_duration_secs("TIME_BUDGET_SECS");
         let action_timeout = parse_duration_millis("ACTION_TIMEOUT_MS");
+        let time_margin = env::var("TIME_MARGIN_MS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .map(Duration::from_millis)
+            .unwrap_or(Duration::ZERO);
 
         let cpus = if let Some(cpus_str) = cpu_list {
             AutoCpus::List(cpus_str)
@@ -155,6 +162,7 @@ impl ConstraintsBuilder {
             cpus_per_agent,
             time_budget,
             action_time: action_timeout,
+            time_margin,
         }
     }
 
@@ -237,6 +245,20 @@ impl ConstraintsBuilder {
         }
     }
 
+    /// Sets an extra invisible margin of time added to both the per-action timeout and total time budget.
+    ///
+    /// This helps avoid edge-case timeouts due to scheduling delays or measurement imprecision.
+    /// This time is **not visible to the agent** and should be small (e.g., a few milliseconds).
+    ///
+    /// Default is zero.
+    #[must_use]
+    pub fn with_time_margin(self, duration: Duration) -> Self {
+        Self {
+            time_margin: duration,
+            ..self
+        }
+    }
+
     /// Consumes the builder and returns the constructed `Constraints`.
     ///
     /// # Returns
@@ -283,6 +305,11 @@ impl ConstraintsBuilder {
             .unwrap_or_else(|| total_ram / (cpus.len() / cpus_per_agent));
         let time_budget = self.time_budget.unwrap_or(Duration::MAX);
         let action_time = self.action_time.unwrap_or(Duration::MAX);
+        let time_margin = if self.time_budget.is_none() && self.action_time.is_none() {
+            Duration::ZERO
+        } else {
+            self.time_margin
+        };
 
         Ok(Constraints {
             total_ram,
@@ -291,6 +318,7 @@ impl ConstraintsBuilder {
             cpus_per_agent,
             time_budget,
             action_time,
+            time_margin,
         })
     }
 }
@@ -344,6 +372,7 @@ pub struct Constraints {
     pub(crate) cpus_per_agent: usize,
     pub(crate) time_budget: Duration,
     pub(crate) action_time: Duration,
+    pub(crate) time_margin: Duration,
 }
 
 impl Constraints {

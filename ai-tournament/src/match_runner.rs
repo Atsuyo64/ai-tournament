@@ -95,7 +95,12 @@ where
             let mut buf = [0; MAX_BUFFER_SIZE];
 
             let time_budget = time_budgets[current];
-            let max_duration = Duration::min(max_turn_duration, time_budget);
+            let mut max_duration = Duration::min(max_turn_duration, time_budget);
+            // always add margin except when no time remains. Otherwise, we could play indefinitely
+            // if each action takes less time than margin
+            if !max_duration.is_zero() {
+                max_duration += resources.time_margin;
+            }
             let timer_start = std::time::Instant::now();
 
             let response = client.send_and_recv(state_str.as_bytes(), &mut buf, max_duration);
