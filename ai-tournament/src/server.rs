@@ -79,7 +79,10 @@ where
         T::FinalScore: 'static,
     {
         // 1. Exit on panic otherwise the program would be in a deadlock
-        Self::setup_panic_hook();
+        Self::setup_panic_hook(self.config.verbose);
+        if self.config.verbose {
+            disable_line_wrap();
+        }
 
         // 2. get agents name & code in *directory*
         let agents = collect_agents(directory.as_ref(), self.config)?;
@@ -106,12 +109,18 @@ where
             }
         }
 
+        if self.config.verbose {
+            enable_line_wrap();
+        }
         Ok(Self::collect_final_scores(&scheduler))
     }
 
-    fn setup_panic_hook() {
+    fn setup_panic_hook(verbose: bool) {
         let orig_hook = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |panic_info| {
+            if verbose {
+                enable_line_wrap();
+            }
             orig_hook(panic_info);
             std::process::exit(1);
         }));
@@ -212,4 +221,12 @@ fn print_running_matches(running: &[MatchSettings]) {
             .join(", ")
     );
     let _ = std::io::Write::flush(&mut std::io::stdout());
+}
+
+fn disable_line_wrap() {
+    print!("\x1b[?7l");
+}
+
+fn enable_line_wrap() {
+    print!("\x1b[?7h");
 }
