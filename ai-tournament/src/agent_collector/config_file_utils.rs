@@ -45,8 +45,8 @@ fn parse_yaml(yaml: &str) -> anyhow::Result<ConfigFile> {
     for (i, line) in yaml.lines().enumerate() {
         let line = line.trim_end();
 
-        // Skip empty lines
-        if line.trim().is_empty() {
+        // Skip empty lines and comments
+        if line.trim().is_empty() || line.trim().starts_with("#") {
             continue;
         }
 
@@ -77,12 +77,13 @@ fn parse_yaml(yaml: &str) -> anyhow::Result<ConfigFile> {
             let value_part = rest[colon_pos + 1..].trim();
 
             // Value should start and end with double quotes
-            if !value_part.starts_with('"') || !value_part.ends_with('"') {
+            if !value_part.starts_with('"') || !value_part[1..].find('"').is_some() {
                 bail!("Line {}: Value must be quoted with double quotes", i + 1);
             }
 
             // Remove surrounding quotes (does not handle escaped quotes inside)
-            let value = &value_part[1..value_part.len() - 1];
+            let second_quote = 1 + value_part[1..].find('"').unwrap();
+            let value = &value_part[1..second_quote];
 
             configs.insert(key.to_string(), value.to_string());
         }
@@ -136,43 +137,3 @@ fn collect_yaml(dir: &Path) -> anyhow::Result<PathBuf> {
     }
     result.context("YAML not found")
 }
-
-// pub(super) fn collect_pair(dir: &Path) -> anyhow::Result<(PathBuf, PathBuf)> {
-//     let mut result: (PathBuf, PathBuf) = Default::default();
-//
-//     check_dir_integrity(dir)?;
-//
-//     let cnt = entries.count();
-//     if cnt != 2 {
-//         bail!("directory contains {cnt} elements instead of 2");
-//     }
-//
-//     let entries = std::fs::read_dir(dir).unwrap();
-//     let mut found = 0;
-//     for entry in entries {
-//         let Ok(entry) = entry else {
-//             bail!("one entry cannot be read in directory");
-//         };
-//         let Ok(metadata) = entry.metadata() else {
-//             continue;
-//         };
-//         if !metadata.is_file() {
-//             bail!("{:?} is not a file", entry.file_name());
-//         }
-//         let Ok(name) = entry.file_name().into_string() else {
-//             bail!("name error: {:?}", entry.file_name());
-//         };
-//         if name.ends_with(".yml") || name.ends_with(".yaml") {
-//             found |= 2;
-//             result.1 = entry.path();
-//         } else {
-//             found |= 1;
-//             result.0 = entry.path();
-//         }
-//     }
-//     if found == 0b11 {
-//         Ok(result)
-//     } else {
-//         bail!("missing directory directory content")
-//     }
-// }

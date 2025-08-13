@@ -1,7 +1,9 @@
+#!/usr/bin/env sh
+# HEY !
 
-
-eval:   my_config   
-configs: 
-  - config_1:"hello world!"
-    - config2: "not\ one\ argument"
- - my_config: "absolutely useless args"
+eval:   my_config   #ici ?
+configs: # là ?
+  - config_1:"hello world!" #commenr # comment
+    - config2: "not\ one\ argument" # comment
+ - my_config: "absolutely us#commeneless args"           #Comment!
+# - commented_config: "noth#commenting"
