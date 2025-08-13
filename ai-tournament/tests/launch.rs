@@ -70,11 +70,11 @@ fn launch_rock_paper_scissors() {
 
     let config = Configuration::new()
         .with_test_all_configs(true)
-        .with_debug_agent_stderr(true);
+        .with_debug_agent_stderr(false);
 
     let evaluator = Evaluator::new(RPSWrapper::default(), config, params);
     let path = "tests/rock_paper_scissors_agents";
-    let tournament = SwissTournament::new(0);
+    let tournament = SwissTournament::with_auto_rounds(8);
     let scores = evaluator.evaluate(&path, tournament).unwrap();
     for (name, score) in scores.into_iter() {
         println!("{name}: {score}");

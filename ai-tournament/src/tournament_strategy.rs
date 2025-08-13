@@ -96,19 +96,43 @@ pub struct SwissTournament {
     agents: Vec<Arc<Agent>>,
     round: usize,
     max_rounds: usize,
+    num_match_per_pair: usize,
     scores: HashMap<Arc<Agent>, (TwoPlayersGameScore, HashSet<Arc<Agent>>)>,
 }
 
 impl SwissTournament {
-    /// Creates a new Swiss tournament with a maximum number of rounds.
+    /// Creates a new Swiss tournament with the number of matches per pair and automatic number of rounds.
     ///
-    /// If `max_rounds` is set to `0`, the number of rounds will be determined automatically
-    /// based on the number of agents (as `ceil(log2(n))`).
-    pub fn new(max_rounds: usize) -> Self {
+    /// The number of rounds is determined automatically based on the number of agents,
+    /// using the formula `ceil(log2(n))`, where `n` is the number of players.
+    ///
+    /// Each pair of agents will play `num_match_per_pair` games per round.
+    /// The order of players will alternate between games to account for side asymmetry.
+    /// The results of these games are aggregated into a single win/loss/draw outcome
+    /// for Swiss pairing and scoring purposes.
+    pub fn with_auto_rounds(num_match_per_pair: usize) -> Self {
+        Self::new(0, num_match_per_pair)
+    }
+
+    /// Creates a new Swiss tournament with a specified number of rounds and matches per pair.
+    ///
+    /// If `max_rounds` is set to `0`, this is equivalent to using
+    /// [`with_auto_rounds`](Self::with_auto_rounds).
+    ///
+    /// Each pair of agents will play `num_match_per_pair` games per round.
+    /// The order of players will alternate between games to account for side asymmetry.
+    /// The results of these games are aggregated into a single win/loss/draw outcome
+    /// for Swiss pairing and scoring purposes.
+    pub fn new(max_rounds: usize, num_match_per_pair: usize) -> Self {
+        assert!(
+            num_match_per_pair >= 1,
+            "Must play at least one match per pairing."
+        );
         Self {
             agents: vec![],
             round: 0,
             max_rounds,
+            num_match_per_pair,
             scores: HashMap::new(),
         }
     }
@@ -133,32 +157,58 @@ impl SwissTournament {
         }
     }
 
-    fn update_scores(&mut self, scores: Vec<MatchResult>) {
-        for match_result in scores {
-            let best_score =
-                match_result.iter().fold(
-                    -f32::INFINITY,
-                    |acu, (_agent, score)| if acu < *score { *score } else { acu },
-                );
-            let is_draw = match_result
-                .iter()
-                .all(|(_agent, score)| *score == best_score);
-            for (agent, score) in &match_result {
-                if is_draw {
-                    self.scores.get_mut(agent).unwrap().0.num_draw += 1;
-                } else if *score == best_score {
-                    self.scores.get_mut(agent).unwrap().0.num_win += 1;
-                } else
-                /* *score != best_score */
-                {
-                    self.scores.get_mut(agent).unwrap().0.num_lose += 1;
-                }
-                for (other, _) in &match_result {
-                    if other != agent {
-                        self.scores.get_mut(agent).unwrap().1.insert(other.clone());
-                    }
-                }
+    fn update_scores(&mut self, match_results: Vec<MatchResult>) {
+        let mut pair_results: HashMap<(Arc<Agent>, Arc<Agent>), Vec<(f32, f32)>> =
+            HashMap::with_capacity(match_results.len() / self.num_match_per_pair);
+
+        // 1. aggregate score per pair
+        for result in match_results {
+            assert!(result.len() == 2, "not two players match ??");
+
+            let (a, score_a) = &result[0];
+            let (b, score_b) = &result[1];
+
+            assert!(
+                !Arc::ptr_eq(a, b) && a.id != b.id,
+                "should not be able to play against yourself"
+            );
+
+            let key = if a.id < b.id {
+                (a.clone(), b.clone())
+            } else {
+                (b.clone(), a.clone())
+            };
+
+            let score = if a.id < b.id {
+                (*score_a, *score_b)
+            } else {
+                (*score_b, *score_a)
+            };
+
+            pair_results.entry(key).or_default().push(score);
+        }
+
+        // 2. update swiss score
+        for ((a, b), scores) in pair_results.into_iter() {
+            let (score_a, score_b) = scores
+                .into_iter()
+                .fold((0.0, 0.0), |acu, (score_a, score_b)| {
+                    (acu.0 + score_a, acu.1 + score_b)
+                });
+            let is_draw = (score_a - score_b).abs() < f32::EPSILON;
+            if is_draw {
+                self.scores.get_mut(&a).unwrap().0.num_draw += 1;
+                self.scores.get_mut(&b).unwrap().0.num_draw += 1;
+            } else if score_a > score_b {
+                self.scores.get_mut(&a).unwrap().0.num_win += 1;
+                self.scores.get_mut(&b).unwrap().0.num_lose += 1;
+            } else {
+                self.scores.get_mut(&a).unwrap().0.num_lose += 1;
+                self.scores.get_mut(&b).unwrap().0.num_win += 1;
             }
+
+            self.scores.get_mut(&a).unwrap().1.insert(b.clone());
+            self.scores.get_mut(&b).unwrap().1.insert(a.clone());
         }
     }
 }
@@ -179,15 +229,27 @@ impl TournamentStrategy for SwissTournament {
         // Pair per score
         let pending = sorted
             .chunks(2)
-            .filter_map(|chunk| {
+            .flat_map(|chunk| {
                 if chunk.len() == 2 {
-                    Some(chunk.to_vec())
+                    let a = &chunk[0];
+                    let b = &chunk[1];
+                    (0..self.num_match_per_pair)
+                        .map(|i| {
+                            // permute order for each match
+                            if i % 2 == 0 {
+                                vec![a.clone(), b.clone()]
+                            } else {
+                                vec![b.clone(), a.clone()]
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                    // Some(chunk.to_vec())
                 } else {
                     //TODO: bye
                     //NOTE: now that scores are handled by Strategy, should be able to just add Bye Match results in internal score
                     // Solution (?): return it anyway and update the scheduler to add +1 when len() < strategy.players_per_match ?
                     // Or return a MatchKind with either Normal(Vec<>) or Bye(Vec<>)
-                    None
+                    vec![] //no match for now
                 }
             })
             .collect::<Vec<_>>();
