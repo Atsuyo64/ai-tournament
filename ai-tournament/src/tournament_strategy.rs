@@ -88,7 +88,8 @@ impl std::fmt::Display for TwoPlayersGameScore {
     }
 }
 
-/// A Swiss-style tournament strategy for two-player games.
+/// A Swiss-style tournament strategy for two-player games. Does not follow strictly the Swiss
+/// tournament rules.
 ///
 /// Agents are paired based on their current score. The number of rounds can be fixed,
 /// or automatically determined as `ceil(log2(num_players))`.
@@ -106,7 +107,8 @@ impl SwissTournament {
     /// The number of rounds is determined automatically based on the number of agents,
     /// using the formula `ceil(log2(n))`, where `n` is the number of players.
     ///
-    /// Each pair of agents will play `num_match_per_pair` games per round.
+    /// Each pair of agents will play `num_match_per_pair` games per round. If the game is
+    /// asymetric, this number should be even to ensure fairness.
     /// The order of players will alternate between games to account for side asymmetry.
     /// The results of these games are aggregated into a single win/loss/draw outcome
     /// for Swiss pairing and scoring purposes.
@@ -245,11 +247,13 @@ impl TournamentStrategy for SwissTournament {
                         .collect::<Vec<_>>()
                     // Some(chunk.to_vec())
                 } else {
-                    //TODO: bye
-                    //NOTE: now that scores are handled by Strategy, should be able to just add Bye Match results in internal score
-                    // Solution (?): return it anyway and update the scheduler to add +1 when len() < strategy.players_per_match ?
-                    // Or return a MatchKind with either Normal(Vec<>) or Bye(Vec<>)
-                    vec![] //no match for now
+                    // NOTE: According to standard Swiss rules, a player should not receive more than one bye.
+                    // We don’t enforce that here for simplicity, but it can be added by tracking byes per player.
+                    let a = &chunk[0];
+                    // Player has no opponent this round (bye). Award a free win but no tie-breaker.
+                    println!("BYE FOR {}", &a.name);
+                    self.scores.get_mut(a).unwrap().0.num_win += 1;
+                    vec![] //no match for the last one (if odd num of players)
                 }
             })
             .collect::<Vec<_>>();
