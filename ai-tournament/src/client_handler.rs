@@ -58,6 +58,8 @@ impl ClientHandler {
         let listener = TcpListener::bind("127.0.0.1:0")
             .context("server error: could not create TcpListener")?;
         let port_arg = listener.local_addr()?.port().to_string();
+        let time_budget_arg = (resources.time_budget.as_micros() as u64).to_string();
+        let action_timeout_arg = (resources.action_time.as_micros() as u64).to_string();
 
         let max_memory = resources.total_ram;
         let cpus = resources
@@ -89,9 +91,11 @@ impl ClientHandler {
                 cpus.clone(),
                 path,
                 port_arg,
+                time_budget_arg,
+                action_timeout_arg,
             ]
         } else {
-            vec![path, port_arg]
+            vec![path, port_arg, time_budget_arg, action_timeout_arg]
         };
 
         // append agent's arguments (from config file) to the args

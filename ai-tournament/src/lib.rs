@@ -97,6 +97,7 @@
 //!     io::{Read, Write},
 //!     net::{Ipv4Addr, SocketAddrV4, TcpStream},
 //!     str::{self, FromStr},
+//!     time::Duration,
 //! };
 //!
 //! use anyhow;
@@ -108,9 +109,15 @@
 //!     let _ = args.next(); // Skip binary name
 //!
 //!     // Read the port number to connect to
-//!     let port = args.next().unwrap().parse().unwrap();
+//!     let port = args.next().unwrap().parse()?;
 //!     let addr = SocketAddrV4::new(Ipv4Addr::from_str("127.0.0.1")?, port);
 //!     let mut stream = TcpStream::connect(addr)?;
+//!
+//!     // Optionnaly, reading time_budget and action_timeout from next args
+//!     let total_time_budget = Duration::from_micros(args.next().unwrap().parse()?);
+//!     let action_timeout = Duration::from_micros(args.next().unwrap().parse()?);
+//!     // After the four first arguments (binary name, port number, time budget, and action
+//!     // timeout) will follow your arguments defined in your config file
 //!
 //!     let mut agent = YourAgent::new();
 //!
@@ -118,10 +125,10 @@
 //!     loop {
 //!         let mut buf = [0; 4096];
 //!         let n = stream.read(&mut buf)?;
-//!         let string = str::from_utf8(&buf[..n]).unwrap();
+//!         let string = str::from_utf8(&buf[..n])?;
 //!
 //!         // Parse game state, compute action, send it back
-//!         let game_state = string.parse::<<YourGame as Game>::State>().unwrap();
+//!         let game_state = string.parse::<<YourGame as Game>::State>()?;
 //!         let action = agent.select_action(game_state);
 //!         stream.write_all(action.to_string().as_bytes())?;
 //!     }
