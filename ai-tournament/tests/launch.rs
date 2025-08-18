@@ -2,11 +2,12 @@ use crate::games::{DummyFactory, RPSWrapper};
 
 use ai_tournament::prelude::*;
 use std::{str::FromStr, time::Duration};
+use time::format_description;
 use tracing::{Level, Metadata};
 use tracing_subscriber::{
     fmt,
     layer::{Context, Filter, SubscriberExt},
-    Layer, Registry,
+    FmtSubscriber, Layer, Registry,
 };
 
 mod games;
@@ -18,7 +19,26 @@ impl<S> Filter<S> for CustomLevelFilter {
     }
 }
 
-fn init_logger() {
+fn init_as_file_logger() {
+    let local_offset = time::UtcOffset::current_local_offset().unwrap();
+    let timer = tracing_subscriber::fmt::time::OffsetTime::new(
+        local_offset,
+        format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap(),
+    );
+
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::TRACE)
+        .with_ansi(false)
+        .with_timer(timer)
+        // .with_writer(writer)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("Could not set golbal default tracing subscriber");
+}
+
+#[allow(dead_code)]
+fn init_debug_logger() {
     let format = tracing_subscriber::fmt::format()
         .without_time()
         .with_ansi(true)
@@ -40,7 +60,11 @@ fn init_logger() {
 
 #[test]
 fn launch_dummy() {
-    init_logger();
+    let verbose_mode = false;
+
+    if !verbose_mode {
+        init_as_file_logger();
+    }
 
     let params = ConstraintsBuilder::new()
         .with_time_budget(Duration::from_secs(10))
@@ -49,8 +73,9 @@ fn launch_dummy() {
         .unwrap();
 
     let config = Configuration::new()
-        .with_verbose(true)
-        .with_allow_uncontained(true);
+        .with_verbose(verbose_mode)
+        .with_allow_uncontained(true)
+        .with_log(false);
 
     let evaluator = Evaluator::new(DummyFactory {}, config, params);
     let path = "tests/dummy_agents";
@@ -61,6 +86,11 @@ fn launch_dummy() {
 
 #[test]
 fn launch_rock_paper_scissors() {
+    let verbose_mode = false;
+    if !verbose_mode {
+        init_as_file_logger();
+    }
+
     let params = ConstraintsBuilder::new()
         .with_time_budget(Duration::from_secs(10))
         .build()
@@ -69,7 +99,8 @@ fn launch_rock_paper_scissors() {
     let config = Configuration::new()
         .with_test_all_configs(true)
         .with_debug_agent_stderr(false)
-        .with_log(true);
+        .with_verbose(verbose_mode)
+        .with_log(false);
 
     let evaluator = Evaluator::new(RPSWrapper::default(), config, params);
     let path = "tests/rock_paper_scissors_agents";

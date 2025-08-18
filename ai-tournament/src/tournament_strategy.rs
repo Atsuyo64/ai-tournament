@@ -251,7 +251,6 @@ impl TournamentStrategy for SwissTournament {
                     // We don’t enforce that here for simplicity, but it can be added by tracking byes per player.
                     let a = &chunk[0];
                     // Player has no opponent this round (bye). Award a free win but no tie-breaker.
-                    println!("BYE FOR {}", &a.name);
                     self.scores.get_mut(a).unwrap().0.num_win += 1;
                     vec![] //no match for the last one (if odd num of players)
                 }

@@ -431,6 +431,7 @@ dependencies = [
  "nu-ansi-term",
  "sharded-slab",
  "thread_local",
+ "time",
  "tracing-core",
 ]
 
