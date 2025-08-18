@@ -88,7 +88,7 @@ pub struct ConstraintsBuilder {
     cpus: AutoCpus,
     cpus_per_agent: Option<usize>,
     time_budget: Option<Duration>,
-    action_time: Option<Duration>,
+    action_timeout: Option<Duration>,
     time_margin: Duration,
 }
 
@@ -161,7 +161,7 @@ impl ConstraintsBuilder {
             cpus,
             cpus_per_agent,
             time_budget,
-            action_time: action_timeout,
+            action_timeout,
             time_margin,
         }
     }
@@ -240,7 +240,7 @@ impl ConstraintsBuilder {
     #[must_use]
     pub fn with_action_timeout(self, duration: Duration) -> Self {
         Self {
-            action_time: Some(duration),
+            action_timeout: Some(duration),
             ..self
         }
     }
@@ -304,8 +304,8 @@ impl ConstraintsBuilder {
             .map(|i| i * 1_000_000)
             .unwrap_or_else(|| total_ram / (cpus.len() / cpus_per_agent));
         let time_budget = self.time_budget.unwrap_or(Duration::MAX);
-        let action_time = self.action_time.unwrap_or(Duration::MAX);
-        let time_margin = if self.time_budget.is_none() && self.action_time.is_none() {
+        let action_timeout = self.action_timeout.unwrap_or(Duration::MAX);
+        let time_margin = if self.time_budget.is_none() && self.action_timeout.is_none() {
             Duration::ZERO
         } else {
             self.time_margin
@@ -317,7 +317,7 @@ impl ConstraintsBuilder {
             cpus,
             cpus_per_agent,
             time_budget,
-            action_time,
+            action_timeout,
             time_margin,
         })
     }
@@ -371,7 +371,7 @@ pub struct Constraints {
     pub(crate) cpus: HashSet<u8>,
     pub(crate) cpus_per_agent: usize,
     pub(crate) time_budget: Duration,
-    pub(crate) action_time: Duration,
+    pub(crate) action_timeout: Duration,
     pub(crate) time_margin: Duration,
 }
 

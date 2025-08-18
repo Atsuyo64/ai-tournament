@@ -270,7 +270,10 @@ impl TournamentStrategy for SwissTournament {
         if self.max_rounds == 0 {
             let n = self.agents.len();
             self.max_rounds = f32::log2(n as f32).ceil() as usize;
-            info!("Max number of rounds: {}", self.max_rounds);
+            info!(
+                "Swiss tournament auto number of rounds: {}",
+                self.max_rounds
+            );
         }
         for agent in &self.agents {
             self.scores.insert(

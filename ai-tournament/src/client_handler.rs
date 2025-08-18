@@ -59,7 +59,7 @@ impl ClientHandler {
             .context("server error: could not create TcpListener")?;
         let port_arg = listener.local_addr()?.port().to_string();
         let time_budget_arg = (resources.time_budget.as_micros() as u64).to_string();
-        let action_timeout_arg = (resources.action_time.as_micros() as u64).to_string();
+        let action_timeout_arg = (resources.action_timeout.as_micros() as u64).to_string();
 
         let max_memory = resources.total_ram;
         let cpus = resources

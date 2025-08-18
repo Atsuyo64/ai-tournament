@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc, time::Duration};
 
 use agent_interface::Game;
-use tracing::{info, instrument, trace, warn};
+use tracing::{error, info, instrument, trace, warn};
 
 use crate::{
     agent::Agent, client_handler::ClientHandler, configuration::Configuration,
@@ -36,7 +36,7 @@ pub struct RunnerResult {
     // pub duration: Duration,
 }
 
-#[instrument(skip_all,fields(VS=settings.to_string()))]
+#[instrument(skip_all,fields(%settings,cpus=?settings.resources.cpus))]
 pub fn run_match<G: Game>(
     settings: MatchSettings,
     config: Configuration,
@@ -53,7 +53,7 @@ where
     } = settings;
     let mut errors_string = String::new();
 
-    let max_turn_duration = resources.action_time;
+    let max_turn_duration = resources.action_timeout;
     const MAX_BUFFER_SIZE: usize = 4096;
 
     let mut clients: HashMap<usize, ClientHandler> = HashMap::new();
@@ -74,7 +74,7 @@ where
                 }
                 Err(e) => {
                     errors_string += &format!("{} startup failed ({e}), ", agent.name);
-                    info!("Failed to start client for agent {}: {e}", agent.name);
+                    warn!("Failed to start client for agent {}: {e}", agent.name);
                 }
             }
         }
@@ -89,9 +89,10 @@ where
         turn += 1;
         let current = game.get_current_player_number();
 
+        let state_str = game.get_state().to_string();
+
         // If player is missing, action is none
         let action = if let Some(client) = clients.get_mut(&current) {
-            let state_str = game.get_state().to_string();
             let mut buf = [0; MAX_BUFFER_SIZE];
 
             let time_budget = time_budgets[current];
@@ -118,8 +119,13 @@ where
                             Ok(action) => Some(action),
                             Err(_) => {
                                 info!(
-                                    "Agent {} sent invalid action: '{text}' (len = {received})",
-                                    ordered_player[current].name
+                                    "Agent {} sent invalid action: '{text}' {}",
+                                    ordered_player[current].name,
+                                    if received == 0 {
+                                        "(probably crashed)"
+                                    } else {
+                                        ""
+                                    }
                                 );
                                 if received == 0 {
                                     errors_string += &format!(
@@ -137,7 +143,7 @@ where
                             }
                         },
                         Err(_) => {
-                            info!(
+                            error!(
                                 "Agent {} sent non-UTF8 response",
                                 ordered_player[current].name
                             );
@@ -148,18 +154,24 @@ where
                         }
                     }
                 }
-                Err(_e) => {
-                    info!(
-                        "Agent {} did not respond in time ({}ms)",
-                        ordered_player[current].name,
-                        max_duration.as_millis()
-                    );
+                Err(e) => {
                     // timeout is silenced when duration is small (time budget exceeded is normal behaviour (must happen))
-                    if max_duration >= resources.action_time
+                    if max_duration >= resources.action_timeout
                         || max_duration >= (resources.time_budget / 10)
                     {
                         errors_string += &format!(
-                            "{}: {_e} response timeout ({}ms) (turn {turn}), ",
+                            "{}: {e} response timeout ({}ms) (turn {turn}), ",
+                            ordered_player[current].name,
+                            max_duration.as_millis()
+                        );
+                        warn!(
+                            "Agent {} did not respond in time (min(action_timeout, time_budget) + margin = {}ms): state={state_str}, error={e}",
+                            ordered_player[current].name,
+                            max_duration.as_millis()
+                        );
+                    } else {
+                        info!(
+                            "Agent {} did not have enough time (small timeout: {}ms)",
                             ordered_player[current].name,
                             max_duration.as_millis()
                         );
@@ -177,9 +189,9 @@ where
         // Only warn when a non-None action is rejected
         if let Err(e) = game.apply_action(&action) {
             if action.is_some() {
-                info!(
-                    "player {current}'s action ({}) rejected by Game",
-                    action.as_ref().unwrap().to_string()
+                warn!(
+                    "player {current}'s action ({}) rejected by Game (State={state_str})",
+                    action.as_ref().unwrap().to_string(),
                 );
                 errors_string += &format!(
                     "{}'s action '{}' was rejected: {e}, ",
@@ -194,13 +206,16 @@ where
     drop(clients);
 
     // Collect final scores
+    let mut result_str = vec![];
     let mut results = vec![];
     for (i, agent) in ordered_player.iter().enumerate() {
         let score = game.get_player_score(i as u32);
         results.push((agent.clone(), score));
+        result_str.push(score.to_string());
     }
 
-    trace!("match end");
+    let result_str = result_str.join("-");
+    trace!("match end: {result_str}, {errors_string}");
     RunnerResult {
         results,
         resources_freed: resources,

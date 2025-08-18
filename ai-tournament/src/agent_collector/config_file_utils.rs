@@ -4,15 +4,16 @@ use std::{
 };
 
 use anyhow::{bail, Context};
+use tracing::{error, instrument};
 
-pub fn get_all_configs(dir: &PathBuf) -> anyhow::Result<HashMap<String, String>> {
+pub fn get_all_configs(dir: &Path) -> anyhow::Result<HashMap<String, String>> {
     let config_file = collect_yaml(dir)?;
     let yaml = std::fs::read_to_string(config_file)?;
     let full_config = parse_yaml(&yaml)?;
     Ok(full_config.configs)
 }
 
-pub fn get_eval_config(dir: &PathBuf) -> anyhow::Result<String> {
+pub fn get_eval_config(dir: &Path) -> anyhow::Result<String> {
     let config_file = collect_yaml(dir)?;
     let yaml = std::fs::read_to_string(config_file)?;
     let full_config = parse_yaml(&yaml)?;
@@ -27,6 +28,10 @@ pub fn get_eval_config(dir: &PathBuf) -> anyhow::Result<String> {
 pub fn get_args_from_config(config: &str) -> anyhow::Result<Vec<String>> {
     if config.contains("\"") || config.contains("'") || config.contains("`") {
         bail!("arguments should not contain any quote")
+    }
+    if config.is_empty() {
+        // "".split(" ") == vec![""] : we should allow having an empty config
+        return Ok(vec![]);
     }
     Ok(config.split(" ").map(String::from).collect())
 }
@@ -94,14 +99,21 @@ fn parse_yaml(yaml: &str) -> anyhow::Result<ConfigFile> {
     Ok(ConfigFile { eval, configs })
 }
 
+#[instrument]
 pub(super) fn check_dir_integrity(dir: &Path) -> anyhow::Result<()> {
-    let Ok(metadata) = dir.metadata() else {
-        bail!("error reading directory: {}", dir.metadata().unwrap_err());
+    let metadata = match dir.metadata() {
+        Ok(metadata) => metadata,
+        Err(e) => {
+            error!("Error reading directory: {}", e);
+            bail!("error reading directory: {}", e);
+        }
     };
     if !metadata.is_dir() {
+        error!("Not a directory");
         bail!("not a directory");
     }
     let Ok(_) = std::fs::read_dir(dir) else {
+        error!("error reading directory");
         bail!("error reading directory");
     };
     Ok(())

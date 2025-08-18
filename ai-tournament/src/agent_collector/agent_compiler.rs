@@ -3,7 +3,9 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::bail;
+use tracing::{error, instrument};
 
+#[instrument(parent = None)]
 pub fn compile_single_agent(dir: &Path) -> anyhow::Result<PathBuf> {
     const BIN_NAME: &str = "eval";
     //TODO: check crates used ? (list "abnormal" crates)
@@ -25,20 +27,21 @@ pub fn compile_single_agent(dir: &Path) -> anyhow::Result<PathBuf> {
         .spawn()
         .expect("could not launch command 'cargo'");
 
-    let output = proc.wait_with_output().expect("failed to wait on child");
+    let output = proc
+        .wait_with_output()
+        .expect("failed to wait for end of compilation");
     if output.status.success() {
         let path = dir.join("target/release/").join(BIN_NAME);
         //FIXME: on Windows: BIN_NAME.join(".exe") or something link that
         Ok(path)
     } else {
+        let output = &output.stderr;
+        let output = std::str::from_utf8(output).unwrap().trim();
+        error!("compilation error: {output}");
+
         bail!(
             "Compilation error: {}",
-            std::str::from_utf8(&output.stderr)
-                .unwrap()
-                .trim()
-                .split("\n")
-                .next()
-                .unwrap_or_default(),
+            output.trim().split("\n").next().unwrap_or_default(),
         )
     }
 }

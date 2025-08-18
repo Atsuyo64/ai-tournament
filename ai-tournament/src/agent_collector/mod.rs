@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::bail;
+use tracing::{error, info, instrument, warn};
 
 use crate::{
     agent::Agent, agent_collector::config_file_utils::check_dir_integrity,
@@ -15,8 +16,9 @@ mod agent_compiler;
 
 mod config_file_utils;
 
+#[instrument(skip(config))]
 pub fn collect_agents(
-    directory: impl AsRef<Path>,
+    directory: impl AsRef<Path> + std::fmt::Debug,
     config: Configuration,
 ) -> anyhow::Result<Vec<Arc<Agent>>> {
     let verbose = config.verbose;
@@ -66,6 +68,8 @@ pub fn collect_agents(
             })
             .collect::<Vec<_>>()
     };
+    info!(agent_directories=?subdirs);
+
     for subdir in subdirs {
         let name = subdir
             .file_name()
@@ -78,12 +82,13 @@ pub fn collect_agents(
             if compile {
                 print!("Compiling {name:·<longest_name$} ");
             } else {
-                print!("Collecting {name:.<longest_name$} ");
+                print!("Collecting {name:·<longest_name$} ");
             }
             let _ = std::io::stdout().flush(); // try to flush stdout
         }
 
         if subdir.metadata().unwrap().is_file() {
+            warn!("Not a directory: '{name}'");
             if verbose {
                 println!("{RED}Not a directory{RESET}");
             }
@@ -97,6 +102,10 @@ pub fn collect_agents(
         };
 
         let Ok(res) = res else {
+            // compile => already logged
+            if !compile {
+                error!("agent collection failed: {}", res.as_ref().unwrap_err());
+            }
             if verbose {
                 println!("{RED}{}{RESET}", res.unwrap_err());
             }
@@ -106,17 +115,26 @@ pub fn collect_agents(
         if all_configs {
             let configs = config_file_utils::get_all_configs(&subdir);
             let Ok(configs) = configs else {
-                println!("{RED}{}{RESET}", configs.unwrap_err());
+                error!("Error getting config: {}", configs.as_ref().unwrap_err());
+                if verbose {
+                    println!("{RED}{}{RESET}", configs.unwrap_err());
+                }
                 continue;
             };
 
             for (config_name, config) in configs {
                 let args = config_file_utils::get_args_from_config(&config);
                 let Ok(args) = args else {
-                    print!(
-                        "{YELLOW}Config '{config_name}' error: {}, {RESET}",
-                        args.unwrap_err()
+                    warn!(
+                        "Config '{config_name}' error: {}",
+                        args.as_ref().unwrap_err()
                     );
+                    if verbose {
+                        print!(
+                            "{YELLOW}Config '{config_name}' error: {}, {RESET}",
+                            args.unwrap_err()
+                        );
+                    }
                     continue;
                 };
                 vec.push(Arc::new(Agent::new(
@@ -130,15 +148,24 @@ pub fn collect_agents(
         } else {
             let config = config_file_utils::get_eval_config(&subdir);
             let Ok(config) = config else {
-                println!("{RED}No 'eval' config: {}{RESET}", config.unwrap_err());
+                error!("No 'eval' config: {}", config.as_ref().unwrap_err());
+                if verbose {
+                    println!("{RED}No 'eval' config: {}{RESET}", config.unwrap_err());
+                }
                 continue;
             };
             let args = config_file_utils::get_args_from_config(&config);
             let Ok(args) = args else {
-                println!(
-                    "{RED}Invalid config: '{config}' ({}){RESET}",
-                    args.unwrap_err()
+                error!(
+                    "Invalid config: '{config}' ({})",
+                    args.as_ref().unwrap_err()
                 );
+                if verbose {
+                    println!(
+                        "{RED}Invalid config: '{config}' ({}){RESET}",
+                        args.unwrap_err()
+                    );
+                }
                 continue;
             };
 
@@ -155,7 +182,8 @@ pub fn collect_agents(
     Ok(vec)
 }
 
-fn collect_binary(dir: &PathBuf) -> anyhow::Result<PathBuf> {
+#[instrument]
+fn collect_binary(dir: &Path) -> anyhow::Result<PathBuf> {
     check_dir_integrity(dir)?;
 
     // Safety: `check_dir_integrity` should have checked that read_dir is ok

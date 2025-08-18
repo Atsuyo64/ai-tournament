@@ -23,7 +23,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc, Mutex};
-use tracing::{instrument, trace};
+use tracing::{info, instrument, trace};
 
 /// The main type for running AI agent tournaments.
 ///
@@ -96,6 +96,7 @@ where
 
         // 2. get agents name & code in *directory*
         let agents = collect_agents(directory.as_ref(), self.config)?;
+        info!(?agents);
 
         // 3. add agents to tournament
         tournament.add_agents(agents);
@@ -104,7 +105,7 @@ where
         let mut scheduler = TournamentScheduler::new(self.constraints.clone(), tournament);
         let (tx_result, rx_result) = mpsc::channel();
 
-        // 5. create running matches shared vector
+        // 5. create running matches shared vector (for printing purpose)
         let running = Arc::new(Mutex::new(vec![]));
 
         // 6. Init matches

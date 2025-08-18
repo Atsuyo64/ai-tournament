@@ -1,3 +1,5 @@
+use tracing::trace;
+
 use crate::agent::Agent;
 use crate::constraints::Constraints;
 use crate::match_runner::{MatchResult, MatchSettings, RunnerResult};
@@ -38,10 +40,12 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
 
         // Generate new round if needed
         if self.running_matches == 0 && self.pending_matches.is_empty() && !self.is_finished {
+            trace!("next round");
             self.pending_matches = self.strategy.advance_round(mem::take(&mut self.scores));
 
             if self.pending_matches.is_empty() {
                 // no more matches from `strategy`
+                trace!("no more matches");
                 self.is_finished = true;
             }
         }
