@@ -61,8 +61,6 @@ fn launch_dummy() {
 
 #[test]
 fn launch_rock_paper_scissors() {
-    init_logger();
-
     let params = ConstraintsBuilder::new()
         .with_time_budget(Duration::from_secs(10))
         .build()
@@ -70,7 +68,8 @@ fn launch_rock_paper_scissors() {
 
     let config = Configuration::new()
         .with_test_all_configs(true)
-        .with_debug_agent_stderr(false);
+        .with_debug_agent_stderr(false)
+        .with_log(true);
 
     let evaluator = Evaluator::new(RPSWrapper::default(), config, params);
     let path = "tests/rock_paper_scissors_agents";

@@ -13,6 +13,7 @@
 use crate::agent_collector::collect_agents;
 use crate::configuration::Configuration;
 use crate::constraints::Constraints;
+use crate::logger::init_logger;
 use crate::match_runner::{run_match, MatchSettings, RunnerResult};
 use crate::tournament::TournamentScheduler;
 use crate::tournament_strategy::TournamentStrategy;
@@ -22,6 +23,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc, Mutex};
+use tracing::{instrument, trace};
 
 /// The main type for running AI agent tournaments.
 ///
@@ -49,8 +51,16 @@ where
     G::Action: FromStr + ToString,
     G: 'static + Send,
 {
+    #[instrument(skip_all)]
     /// Create an [`Evaluator`] with given [`Constraints`] and [`GameFactory`]
     pub fn new(factory: F, config: Configuration, constraints: Constraints) -> Evaluator<G, F> {
+        if config.log {
+            init_logger();
+        }
+
+        // trace!("config: {:?}\nconstraints: {:?}", &config, &constraints);
+        trace!(?config, ?constraints);
+
         Evaluator {
             factory,
             config,
