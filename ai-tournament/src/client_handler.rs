@@ -187,7 +187,7 @@ impl ClientHandler {
         let n = self
             .stream
             .read(buf)
-            .context("error while reading stream")?;
+            .context("server could not read stream")?;
         Ok(n)
     }
 
@@ -223,7 +223,13 @@ impl ClientHandler {
 impl Drop for ClientHandler {
     fn drop(&mut self) {
         //FIXME: panic
-        self.kill_child_process()
-            .expect("could not kill child process");
+        if let Err(e) = self.kill_child_process() {
+            error!(
+                "POTENTIAL RESOURCE LEAK: COULD NOT KILL PROCESS CHILD: {e:#?},\n {:#?}",
+                self.process.child
+            );
+
+            // .expect("could not kill child process");
+        }
     }
 }
