@@ -2,7 +2,7 @@
 //!
 //! This module provides tools to configure and enforce per-agent and global resource limits
 //! during tournament evaluation. Constraints include memory usage, CPU allocation, and timing
-//! restrictions, and are applied using Linux cgroups v2 and `taskset`.
+//! restrictions. When supported, these are enforced using Linux cgroups v2 and `taskset`.
 //!
 //! # Overview
 //!
@@ -14,14 +14,28 @@
 //! - **Timing constraints**:
 //!   * Per-action timeout
 //!   * Total think time ("time budget") per agent across a match
+//!   * *Invisible time margin* to absorb small scheduling delays
 //!
 //! Once built, a [`Constraints`] object can be passed to the evaluator to enforce limits
-//! at runtime. Internally, constraints are enforced Linux cgroups v2 and taskset.
+//! at runtime.
 //!
-//! # Linux-Only
+//! # Platform Support
 //!
-//! This module **only works on Linux** systems with **cgroups v2 enabled**. Attempts to run
-//! on other platforms will constrain only timing.
+//! - This module **only enforces CPU/memory isolation** on **Linux systems with cgroups v2** and `taskset` installed.
+//! - If your system lacks these features, the evaluator will **fall back to time-only constraints**.
+//!
+//! This fallback behavior is enabled by setting the `allow_uncontained` flag in the [`Configuration`](crate::configuration::Configuration):
+//!
+//! - When `allow_uncontained = false` (default), the evaluator will **fail early** on unsupported platforms.
+//! - When `allow_uncontained = true`, it will **skip containerization** and enforce only timing constraints.
+//!
+//! This is useful for development, testing, or running on limited environments (e.g., CI, macOS).
+//!
+//! # Time Margin
+//!
+//! A small, invisible margin of time can be added to both the action timeout and time budget
+//! using [`ConstraintsBuilder::with_time_margin()`]. This margin is **not visible to agents**
+//! and is intended to prevent unfair timeouts caused by minor scheduling delays or system load spikes.
 //!
 //! # Example
 //!
@@ -36,6 +50,7 @@
 //!     .with_cpus_per_agent(2)
 //!     .with_time_budget(Duration::from_secs(600))
 //!     .with_action_timeout(Duration::from_millis(200))
+//!     .with_time_margin(Duration::from_millis(50))
 //!     .build()
 //!     .unwrap();
 //! ```
