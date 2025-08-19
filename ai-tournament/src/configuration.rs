@@ -1,4 +1,22 @@
 //! Config for the evaluator behaviors
+//!
+//! This module provides configuration options for controlling the behavior of the evaluator.
+//!
+//! Configuration can be created programmatically using [`Configuration::new()`] or by reading
+//! environment variables using [`Configuration::from_env()`].
+//!
+//! # Environment Variables
+//!
+//! The following environment variables can be used to override configuration values. All
+//! values are optional, and case-insensitive. Set the value to `"true"` to enable a flag.
+//!
+//! - `EVAL_VERBOSE` — Enable verbose output (default: `true`)
+//! - `EVAL_LOG` — Enable logging to a file (default: `false`)
+//! - `EVAL_ALLOW_UNCONTAINED` — Allow unsafe fallbacks (e.g., skipping `taskset`, `cgroup`) (default: `false`)
+//! - `EVAL_COMPILE_AGENTS` — Compile agents before evaluation (default: `true`)
+//! - `EVAL_SELF_TEST` — Enable self-test mode (for single-agent evaluation) (default: `false`)
+//! - `EVAL_TEST_ALL_CONFIGS` — Test all available configurations instead of just `eval` (default: `false`)
+//! - `EVAL_DEBUG_AGENT_STDERR` — Print agent stderr for debugging (default: `false`)
 
 /// Configuration for evaluator behaviors.
 #[derive(Debug, Clone, Copy)]
@@ -92,7 +110,7 @@ impl Configuration {
 
     /// Enable or disable self-test mode.
     ///
-    /// When enabled, evaluates a single agent in the current directory.
+    /// When enabled, evaluates a single agent in the CURRENT directory.
     /// When disabled, expects multiple agents in the given directory.
     pub fn with_self_test(mut self, value: bool) -> Self {
         self.self_test = value;
