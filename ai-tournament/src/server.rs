@@ -1,10 +1,44 @@
 //! Core evaluation logic for running AI tournaments.
 //!
-//! This module defines the [`Evaluator`] type, which manages the tournament execution:
-//! - Compiles agents from a specified directory
-//! - Runs the tournament using a user-defined [`TournamentStrategy`]
-//! - Enforces resource constraints (e.g., CPU, memory) during agent execution
-//! - Returns final scores according to the tournament strategy
+//! This module defines the [`Evaluator`] type, which orchestrates tournament execution.
+//! Its responsibilities include:
+//!
+//! - Compiling or loading agents from a specified directory
+//! - Enforcing resource limits via [`Constraints`]
+//! - Running matches using a user-defined [`TournamentStrategy`]
+//! - Returning final scores per agent
+//!
+//! # Behavior & Configuration
+//!
+//! Behavior is controlled by a [`Configuration`] object:
+//!
+//! - When `config.compile_agents = true`, the evaluator expects agents to be **Rust crates** in the given directory, each containing a YAML config at the root.
+//! - When `config.compile_agents = false`, the evaluator expects each subdirectory to contain **only two files**:
+//!   - An executable binary (the agent)
+//!   - A `.yaml` or `.yml` config file (see below)
+//!
+//! The YAML config describes agent configurations:
+//!
+//! ```yaml
+//! eval: eval_config_name
+//! configs:
+//!   - baseline: "--default"
+//!   - aggressive: "--mode aggressive"
+//!   - eval_config_name: "--args used for evaluation"  # Used if `test_all_configs = false`
+//! ```
+//!
+//! > ⚠️ This file is manually parsed and supports only basic YAML. Comments are supported, but advanced YAML features (anchors, nesting, multi-line strings) may not parse correctly.
+//!
+//! If `config.test_all_configs = true`, all configs listed under `configs` are tested. Otherwise, only the config named in `eval` is used.
+//!
+//! ## Self-Test Mode
+//!
+//! When `config.self_test = true`, the evaluator ignores the directory parameter and runs a match **using the current working directory** as a single agent. This is useful for debugging or development.
+//!
+//! ## Uncontained Mode
+//!
+//! If `config.allow_uncontained = true`, the evaluator will run even if Linux cgroups v2 or `taskset` are missing.
+//! In this case, **only time constraints are enforced**, and CPU/RAM isolation is skipped.
 //!
 //! # Example
 //!
