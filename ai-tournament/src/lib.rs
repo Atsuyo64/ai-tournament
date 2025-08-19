@@ -11,6 +11,16 @@
 //! Each match consists of one or more agents, each running as a separate OS process.
 //! Process-level isolation applies constraints such as CPU affinity, memory limits, and timeouts.
 //!
+//! # Documentation Overview
+//!
+//! - For details about the core tournament execution and agent lifecycle, see the [`server`] module.
+//! - For configuring evaluation behavior, resource limits, and execution environment,
+//! see [`Configuration`](crate::configuration::Configuration) and [`constraints`].
+//! - To understand tournament formats and match scheduling, see the [`TournamentStrategy`](crate::tournament_strategy::TournamentStrategy) trait and its implementations.
+//! - For implementing custom games and agents, check out the [`Game`] and [`GameFactory`] traits.
+//!
+//! This crate is designed to be modular and extensible, allowing you to customize agent compilation, match execution, and resource management.
+//!
 //! # Usage Example
 //!
 //! Below is a minimal example of using the evaluator with a custom game and built-in tournament:
