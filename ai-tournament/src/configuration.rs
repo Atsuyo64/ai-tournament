@@ -36,9 +36,34 @@ impl Configuration {
     }
 
     /// Create configuration from environment variables.
+    ///
+    /// The following environment variables are recognized:
+    /// - `EVAL_VERBOSE`: if set to `"true"`, enables verbose output (default: `true`)
+    /// - `EVAL_LOG`: if set to `"true"`, enables logging to file (default: `false`)
+    /// - `EVAL_ALLOW_UNCONTAINED`: if set to `"true"`, allows unsafe fallbacks (default: `false`)
+    /// - `EVAL_COMPILE_AGENTS`: if set to `"true"`, enables agent compilation (default: `true`)
+    /// - `EVAL_SELF_TEST`: if set to `"true"`, enables self-test mode (default: `false`)
+    /// - `EVAL_TEST_ALL_CONFIGS`: if set to `"true"`, enables testing all configurations (default: `false`)
+    /// - `EVAL_DEBUG_AGENT_STDERR`: if set to `"true"`, enables agent stderr debug output (default: `false`)
+    ///
+    /// Any other value (including unset) will result in using the default value for each field.
     pub fn from_env() -> Self {
-        // TODO: implement reading configuration from environment
-        todo!("Configuration::from_env")
+        fn get_env_flag(var: &str, default: bool) -> bool {
+            match std::env::var(var) {
+                Ok(val) => val.eq_ignore_ascii_case("true"),
+                Err(_) => default,
+            }
+        }
+
+        Self {
+            verbose: get_env_flag("EVAL_VERBOSE", true),
+            log: get_env_flag("EVAL_LOG", false),
+            allow_uncontained: get_env_flag("EVAL_ALLOW_UNCONTAINED", false),
+            compile_agents: get_env_flag("EVAL_COMPILE_AGENTS", true),
+            self_test: get_env_flag("EVAL_SELF_TEST", false),
+            test_all_configs: get_env_flag("EVAL_TEST_ALL_CONFIGS", false),
+            debug_agent_stderr: get_env_flag("EVAL_DEBUG_AGENT_STDERR", false),
+        }
     }
 
     /// Enable or disable silent mode.
