@@ -162,8 +162,13 @@ impl LimitedProcess {
                 cgroup.kill().context("could not kill process")?;
                 wait_for_process_cleanup(cgroup, self.child.id() as u64, max_duration)
                     .context("process cleanup timed out")?;
-                cgroup.delete().context("could not cleanup cgroup")?;
+                // at this point, the process is killed. Even so the cgroup cleanup fail, it is
+                // 'safe' (probably) to continue
                 self.cleaned_up = true;
+                if let Err(e) = cgroup.delete() {
+                    // Oh well... Whatever...
+                    tracing::warn!("Failed to remove cgroup. If this happens a lot, it may slow down the computer. {e}");
+                }
                 Ok(())
             }
             None => self.child.kill().context("could not kill process"),
@@ -185,7 +190,7 @@ impl LimitedProcess {
         })
     }
 
-    // Will print out as much info as possible
+    /// Will print out as much info as possible
     pub fn try_debug_cgroup(&mut self) {
         let pid = self.child.id();
         let mut p = String::new();

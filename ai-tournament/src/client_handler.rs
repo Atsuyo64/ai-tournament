@@ -228,7 +228,7 @@ impl Drop for ClientHandler {
                 "POTENTIAL RESOURCE LEAK: COULD NOT KILL PROCESS CHILD: {e:#?},\n {:#?}",
                 self.process.child
             );
-            self.process.try_debug_cgroup();
+            // self.process.try_debug_cgroup();
             // .expect("could not kill child process");
         }
     }
