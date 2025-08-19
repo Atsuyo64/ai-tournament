@@ -184,6 +184,42 @@ impl LimitedProcess {
             cleaned_up: false,
         })
     }
+
+    // Will print out as much info as possible
+    pub fn try_debug_cgroup(&mut self) {
+        let pid = self.child.id();
+        let mut p = String::new();
+        p += "/sys/fs/cgroup/";
+        p += self.cgroup.as_ref().unwrap().path();
+        println!("Path: {p:?}");
+        Self::exec(&format!("lsof +D {p}"));
+        Self::exec(&format!("cat {p}/cgroup.procs"));
+        Self::exec(&format!("cat {p}/cgroup.stat"));
+        Self::exec(&format!("cat {p}/pids.current"));
+        Self::exec(&format!("ps -Flww -p {pid}"));
+        Self::exec(&format!("cat /proc/{pid}/status"));
+        if let Err(e) = self.try_kill(Duration::from_millis(100)) {
+            println!("failed to kill again: {e:#}");
+        } else {
+            println!("successfully killed this time ??");
+        }
+        Self::exec(&format!("rmdir {p}"));
+    }
+
+    fn exec(cmd: &str) {
+        let mut iter = cmd.split(" ");
+        let program = iter.next().unwrap();
+        let args = iter.collect::<Vec<_>>();
+        let output = std::process::Command::new(program)
+            .args(&args)
+            .output()
+            .unwrap();
+        println!(
+            "$ {cmd}\n\x1b[31m{}\x1b[39m{}",
+            std::str::from_utf8(&output.stderr).unwrap(),
+            std::str::from_utf8(&output.stdout).unwrap()
+        );
+    }
 }
 
 impl Drop for LimitedProcess {
