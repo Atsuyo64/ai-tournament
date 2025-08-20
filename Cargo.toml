@@ -8,6 +8,7 @@ rust-version = "1.84.1"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Atsuyo64/ai-tournament"
 readme = "README.md"
+exclude = ["tests/"] # those tests requires agent crates which have not point being published
 
 [dependencies]
 cgroups-rs = "0.3.4"
