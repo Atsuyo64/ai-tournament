@@ -1,4 +1,4 @@
-# AI Agent Evaluator
+# ai-tournament
 
 A modular Rust crate system for evaluating AI agents via customizable tournaments, supporting sandboxed execution and flexible constraints.
 
