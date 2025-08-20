@@ -21,7 +21,8 @@ This project provides tools to benchmark and evaluate AI agents in a controlled 
   * Memory limits
   * Timeouts and think-time budgets
 
-> **Note:** Full CPU and RAM isolation requires **Linux with cgroups v2** and the `taskset` command installed.  
+> [!NOTE]
+> Full CPU and RAM isolation requires **Linux with cgroups v2** and the `taskset` command installed.  
 > If not available, the evaluator can optionally fall back to **time-only constraints** by setting `allow_uncontained = true` in the configuration.
 
 ### Evaluator Configuration
