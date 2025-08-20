@@ -6,7 +6,7 @@ name = "ai-tournament"
 version = "0.1.0"
 rust-version = "1.84.1"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/Atsuyo64/AI-agent-evaluator"
+repository = "https://github.com/Atsuyo64/ai-tournament"
 readme = "README.md"
 
 [dependencies]
