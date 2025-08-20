@@ -21,25 +21,77 @@ This project provides tools to benchmark and evaluate AI agents in a controlled 
   * Memory limits
   * Timeouts and think-time budgets
 
-### Usage Summary
+> **Note:** Full CPU and RAM isolation requires **Linux with cgroups v2** and the `taskset` command installed.  
+> If not available, the evaluator can optionally fall back to **time-only constraints** by setting `allow_uncontained = true` in the configuration.
+
+### Evaluator Configuration
+
+The `Configuration` struct controls how evaluation is performed. You can use `Configuration::new()` for defaults or customize it via builder methods.  
+You can also override its behavior using environment variables (`EVAL_VERBOSE`, `EVAL_ALLOW_UNCONTAINED`, etc.). See `configuration.rs` for details.
+
+## Usage Summary
 
 1. Implement the `Game` trait for your task or environment.
-2. Provide AI agents as Rust crates in a specified directory.
+2. Provide AI agents as Rust crates or compiled binaries in a specified directory.
 3. Define resource constraints with the `ConstraintsBuilder`.
 4. Choose or implement a `TournamentStrategy`.
 5. Run the evaluator to get per-agent scores, as defined by the tournament type.
+
+## Agent Directory Structure
+
+There are two ways to organize agent directories depending on whether you're compiling them:
+
+### If `compile_agents = true` (default):
+
+Each agent should be a Rust crate with a YAML config file at the root:
+
+```
+
+agent_directory/
+├── Cargo.toml
+├── src/
+└── config.yaml
+
+```
+
+### If `compile_agents = false`:
+
+Each agent subdirectory should contain a precompiled binary and a YAML config:
+
+```
+
+agent_directory/
+├── agent_binary
+└── config.yaml
+
+````
+
+The `config.yaml` file specifies command-line arguments per named configuration:
+
+```yaml
+eval: default
+configs:
+  - default: "--mode standard"  # config used for single config evaluation. 
+  - aggressive: "--mode aggressive"
+````
+
+If `test_all_configs = true`, all listed configurations will be tested. Otherwise, only the one under `eval` is used.
 
 ## Repository Structure
 
 ```
 .
-├── agent-interface  # Crate defining shared traits Game, GameFactory and Agent
-├── cgroup-manager   # Crate handling Linux cgroups v2 for process isolation
-├── server           # Crate containing core logic: tournament runner, strategy, constraints, etc.
-└── README.md        # You're here!
+├── Cargo.toml                 # Crate manifest
+├── src/
+│   ├── agent_collector/       # Agent compilation and loading logic
+│   ├── constraints.rs         # Resource limits enforcement
+│   ├── configuration.rs       # Evaluation configuration
+│   ├── server.rs              # Core evaluation logic
+│   ├── tournament_strategy.rs # Tournament scheduling and formats
+│   └── ...                    # Other internal modules
+├── README.md
+└── TODO.md
 ```
-
-See [`server/README.md`](server/README.md) for details on the main crate.
 
 ## Usage Example
 
@@ -65,8 +117,7 @@ fn main() -> anyhow::Result<()> {
     let evaluator = Evaluator::new(factory, config, constraints);
 
     let tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
-    let results: HashMap<String, SinglePlayerScore> =
-        evaluator.evaluate("path_to_agents_directory", tournament)?;
+    let results: HashMap<String, SinglePlayerScore> = evaluator.evaluate("path_to_agents_directory", tournament)?;
 
     // Sort and display scores
     let mut sorted = results.iter().collect::<Vec<_>>();
@@ -79,8 +130,8 @@ fn main() -> anyhow::Result<()> {
 }
 ```
 
-> [!NOTE]  
-> Agents must be Rust crates located in the specified directory. Each agent of each match runs as a separate, isolated process.
+> [!NOTE]
+> Agents must be Rust crates or precompiled binaries located in the specified directory. Each agent of each match runs as a separate, isolated process.
 
 ## Example Agent
 
@@ -105,7 +156,7 @@ fn main() -> anyhow::Result<()> {
     let addr = SocketAddrV4::new(Ipv4Addr::from_str("127.0.0.1")?, port);
     let mut stream = TcpStream::connect(addr)?;
 
-    // Optionnaly, reading time_budget and action_timeout from next args
+    // Optionally, reading time_budget and action_timeout from next args
     let total_time_budget = Duration::from_micros(args.next().unwrap().parse()?);
     let action_timeout = Duration::from_micros(args.next().unwrap().parse()?);
     // After the four first arguments (binary name, port number, time budget, and action
@@ -137,7 +188,6 @@ fn main() -> anyhow::Result<()> {
 
 Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
 2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
-
 
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in this crate by you, as defined in the Apache-2.0 license, shall

@@ -5,10 +5,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Context};
-use cgroup_manager::LimitedProcess;
 use tracing::{error, instrument};
 
 use crate::agent::Agent;
+use crate::cgroup_manager::LimitedProcess;
 use crate::constraints::Constraints;
 
 #[derive(Debug)]

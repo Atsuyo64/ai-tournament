@@ -76,7 +76,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
         self.advance()
     }
 
-    /// All tournamnent matches ran and finished
+    /// All tournament matches ran and finished
     pub fn is_finished(&self) -> bool {
         self.is_finished // self.strategy.is_complete() && self.pending_matches.is_empty() && self.running_matches == 0
     }

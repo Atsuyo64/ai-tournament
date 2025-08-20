@@ -33,8 +33,7 @@ fn init_as_file_logger() {
         // .with_writer(writer)
         .finish();
 
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("Could not set golbal default tracing subscriber");
+    let _ = tracing::subscriber::set_global_default(subscriber);
 }
 
 #[allow(dead_code)]
@@ -60,7 +59,7 @@ fn init_debug_logger() {
 
 #[test]
 fn launch_dummy() {
-    let verbose_mode = false;
+    let verbose_mode = true;
 
     if !verbose_mode {
         init_as_file_logger();
@@ -86,7 +85,7 @@ fn launch_dummy() {
 
 #[test]
 fn launch_rock_paper_scissors() {
-    let verbose_mode = false;
+    let verbose_mode = true;
     if !verbose_mode {
         init_as_file_logger();
     }

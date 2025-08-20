@@ -47,12 +47,12 @@
 use crate::agent_collector::collect_agents;
 use crate::configuration::Configuration;
 use crate::constraints::Constraints;
+use crate::game_interface::{Game, GameFactory};
 use crate::logger::init_logger;
 use crate::match_runner::{run_match, MatchSettings, RunnerResult};
-use crate::tournament::TournamentScheduler;
+use crate::tournament_scheduler::TournamentScheduler;
 use crate::tournament_strategy::TournamentStrategy;
 
-use agent_interface::{Game, GameFactory};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;

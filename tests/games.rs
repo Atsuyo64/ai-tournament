@@ -2,7 +2,8 @@ use std::fmt::Display;
 use std::str::FromStr;
 use std::vec;
 
-use agent_interface::*;
+use ai_tournament::game_interface::Game;
+use ai_tournament::game_interface::GameFactory;
 
 pub struct DummyGame {
     counter: std::cell::RefCell<u32>,
@@ -50,21 +51,6 @@ impl GameFactory<DummyGame> for DummyFactory {
             counter: std::cell::RefCell::new(10),
             got_none: false,
         }
-    }
-}
-
-// Unused
-pub struct DummyAgent;
-
-impl Agent<DummyGame> for DummyAgent {
-    fn init(&mut self) {}
-
-    fn select_action(
-        &mut self,
-        state: <DummyGame as Game>::State,
-        _deadline: std::time::SystemTime,
-    ) -> <DummyGame as Game>::Action {
-        state + 1
     }
 }
 

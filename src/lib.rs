@@ -36,7 +36,7 @@
 //! # impl YourGame {
 //! #     pub fn new() -> YourGame { YourGame }
 //! # }
-//! # impl ai_tournament::Game for YourGame {
+//! # impl ai_tournament::game_interface::Game for YourGame {
 //! #     type State = u32;
 //! #     type Action = u32;
 //! #     fn apply_action(&mut self, _action: &Option<Self::Action>) -> anyhow::Result<()> { Ok(()) }
@@ -45,7 +45,7 @@
 //! #     fn is_finished(&self) -> bool { true }
 //! #     fn get_player_score(&self, _player_number: u32) -> f32 { 0.0 }
 //! # }
-//! # impl ai_tournament::GameFactory<YourGame> for YourGame {
+//! # impl ai_tournament::game_interface::GameFactory<YourGame> for YourGame {
 //! #     fn new_game(&self) -> YourGame { YourGame }
 //! # }
 //! use std::{collections::HashMap, time::Duration};
@@ -93,7 +93,7 @@
 //! #     pub fn select_action(&mut self, _action: u32) -> u32 { 0 }
 //! # }
 //! # struct YourGame;
-//! # impl ai_tournament::Game for YourGame {
+//! # impl ai_tournament::game_interface::Game for YourGame {
 //! #     type State = u32;
 //! #     type Action = u32;
 //! #     fn apply_action(&mut self, _action: &Option<Self::Action>) -> anyhow::Result<()> { Ok(()) }
@@ -112,7 +112,7 @@
 //!
 //! use anyhow;
 //!
-//! use ai_tournament::Game;
+//! use ai_tournament::game_interface::Game;
 //!
 //! fn main() -> anyhow::Result<()> {
 //!     let mut args = env::args();
@@ -123,7 +123,7 @@
 //!     let addr = SocketAddrV4::new(Ipv4Addr::from_str("127.0.0.1")?, port);
 //!     let mut stream = TcpStream::connect(addr)?;
 //!
-//!     // Optionnaly, reading time_budget and action_timeout from next args
+//!     // Optionally, reading time_budget and action_timeout from next args
 //!     let total_time_budget = Duration::from_micros(args.next().unwrap().parse()?);
 //!     let action_timeout = Duration::from_micros(args.next().unwrap().parse()?);
 //!     // After the four first arguments (binary name, port number, time budget, and action
@@ -154,7 +154,9 @@
 //!  * Agent -> Server : string of Game::Action
 #![warn(missing_docs)]
 
-pub use agent_interface::{anyhow, Game, GameFactory};
+mod cgroup_manager;
+pub mod game_interface;
+pub use anyhow;
 mod agent;
 mod agent_collector;
 mod client_handler;
@@ -164,7 +166,7 @@ pub mod constraints;
 mod logger;
 mod match_runner;
 pub mod server;
-mod tournament;
+mod tournament_scheduler;
 pub mod tournament_strategy;
 
 /// Commonly used types and traits for quick access.
@@ -178,10 +180,12 @@ pub mod tournament_strategy;
 /// - [`Configuration`](crate::configuration::Configuration)
 /// - [`ConstraintsBuilder`](crate::constraints::ConstraintsBuilder)
 /// - [`Evaluator`](crate::server::Evaluator)
-/// - all bult-in [`Tournament strategies`](crate::tournament_strategy)
+/// - all built-in [`Tournament strategies`](crate::tournament_strategy)
 pub mod prelude {
     pub use crate::configuration::Configuration;
     pub use crate::constraints::ConstraintsBuilder;
+    pub use crate::game_interface::Game;
+    pub use crate::game_interface::GameFactory;
     pub use crate::server::Evaluator;
     pub use crate::tournament_strategy::*;
 }

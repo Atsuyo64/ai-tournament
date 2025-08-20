@@ -108,7 +108,7 @@ impl SwissTournament {
     /// using the formula `ceil(log2(n))`, where `n` is the number of players.
     ///
     /// Each pair of agents will play `num_match_per_pair` games per round. If the game is
-    /// asymetric, this number should be even to ensure fairness.
+    /// asymmetric, this number should be even to ensure fairness.
     /// The order of players will alternate between games to account for side asymmetry.
     /// The results of these games are aggregated into a single win/loss/draw outcome
     /// for Swiss pairing and scoring purposes.

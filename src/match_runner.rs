@@ -1,12 +1,12 @@
 use std::{collections::HashMap, fmt::Display, str::FromStr, sync::Arc, time::Duration};
 
-use agent_interface::Game;
 use tracing::{error, info, instrument, trace, warn};
 
-use crate::{
-    agent::Agent, client_handler::ClientHandler, configuration::Configuration,
-    constraints::Constraints,
-};
+use crate::agent::Agent;
+use crate::client_handler::ClientHandler;
+use crate::configuration::Configuration;
+use crate::constraints::Constraints;
+use crate::game_interface::Game;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MatchSettings {
