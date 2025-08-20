@@ -3,7 +3,7 @@
 - [x] find a better way to configure/deal with restrictions
 - [x] add logs to matches
 - [x] separate scheduler logic from tournament logic
-- [ ] implement bye logic
+- [x] implement bye logic
 - [x] apply restrictions to agents
 - [x] collect scores
 - [x] collect scores nicely
@@ -22,13 +22,13 @@
 - [x] Update Game trait
 - [x] option to disable print
 - [ ] option to disable ANSI
-- [ ] swiss option: 'match-per-confrontation'
+- [x] swiss option: 'match-per-confrontation'
 - [ ] swiss prevent playing against same adversary
 - [ ] swiss prevent double bye
 - [ ] merging interface and cgroup manager into server ?
 - [x] renaming server
 - [x] README + entry documentation
-- [ ] log all matches to a file
+- [x] log all matches to a file
 - [ ] cli args with clap (or other)
 - [x] cgroup + taskset fallback
 - [ ] test on Windows
