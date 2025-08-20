@@ -132,3 +132,13 @@ fn main() -> anyhow::Result<()> {
 - `YourGame::State` and `YourGame::Action` must implement `FromStr` and `ToString`
 - The agent must connect to the provided TCP port and handle communication over the stream
 - The agent's select_action call must complete before the action timeout, or it will be forcefully terminated.
+
+#### License
+
+Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
+2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
+
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
+be dual licensed as above, without any additional terms or conditions.
