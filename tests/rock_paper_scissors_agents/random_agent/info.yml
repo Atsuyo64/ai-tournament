@@ -1,9 +1,9 @@
-#!/usr/bin/env sh
+### TESTING COMMENT PARSING
 # HEY !
 
-eval:   my_config   #ici ?
-configs: # là ?
-  - config_1:"hello world!" #commenr # comment
+eval:   my_config   #comment here?
+configs: # there ?
+  - config_1:"hello world!" #comment # comment
     - config2: "not\ one\ argument" # comment
  - my_config: "absolutely us#commeneless args"           #Comment!
-# - commented_config: "noth#commenting"
+# - commented_config: "no#commentthing"
