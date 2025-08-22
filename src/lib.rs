@@ -39,6 +39,7 @@
 //! # impl ai_tournament::game_interface::Game for YourGame {
 //! #     type State = u32;
 //! #     type Action = u32;
+//! #     type Score = f32;
 //! #     fn apply_action(&mut self, _action: &Option<Self::Action>) -> anyhow::Result<()> { Ok(()) }
 //! #     fn get_state(&self) -> Self::State { 0 }
 //! #     fn get_current_player_number(&self) -> usize { 0 }
@@ -68,7 +69,7 @@
 //!     let evaluator = Evaluator::new(factory, config, constraints);
 //!
 //!     let mut tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
-//!     let results: HashMap<String, SinglePlayerScore> =
+//!     let results: HashMap<String, SinglePlayerScore<_>> =
 //!         evaluator.evaluate("path_to_agents_directory", tournament)?;
 //!
 //!     // Sort and display scores
@@ -96,6 +97,7 @@
 //! # impl ai_tournament::game_interface::Game for YourGame {
 //! #     type State = u32;
 //! #     type Action = u32;
+//! #     type Score = f32;
 //! #     fn apply_action(&mut self, _action: &Option<Self::Action>) -> anyhow::Result<()> { Ok(()) }
 //! #     fn get_state(&self) -> Self::State { 0 }
 //! #     fn get_current_player_number(&self) -> usize { 0 }

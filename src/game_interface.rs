@@ -1,13 +1,17 @@
 //! Module defining traits that need to be implemented to use the evaluator
 
-use std::time::SystemTime;
+use std::{fmt::Display, str::FromStr, time::SystemTime};
 
 /// What the game should implement
 pub trait Game {
     /// Type representing game state.
-    type State;
+    type State: ToString;
     /// What should be returned by players to make the game progress.
-    type Action;
+    ///
+    /// Warning: assert_equal!(from_str(&action.to_string()).unwrap(), action)
+    type Action: ToString + FromStr;
+    /// The score of an player
+    type Score: PartialOrd + Display + Send;
 
     /// Apply an optional action to the game.
     ///
@@ -33,7 +37,7 @@ pub trait Game {
     fn is_finished(&self) -> bool;
 
     /// Used at the end of the game to collect players score
-    fn get_player_score(&self, player_number: u32) -> f32;
+    fn get_player_score(&self, player_number: u32) -> Self::Score;
 }
 
 /// What the agent should implement. Not used yet, be could allow to launch agent without creating
@@ -62,9 +66,10 @@ mod interface_tests {
 
     impl Game for DummyGame {
         type State = String;
-        type Action = ();
+        type Action = u32;
+        type Score = u32;
 
-        fn apply_action(&mut self, _action: &Option<()>) -> anyhow::Result<()> {
+        fn apply_action(&mut self, _action: &Option<u32>) -> anyhow::Result<()> {
             Ok(())
         }
 
@@ -76,8 +81,8 @@ mod interface_tests {
             "".to_owned()
         }
 
-        fn get_player_score(&self, _player_number: u32) -> f32 {
-            0.0
+        fn get_player_score(&self, _player_number: u32) -> Self::Score {
+            0
         }
 
         fn get_current_player_number(&self) -> usize {
@@ -104,6 +109,7 @@ mod interface_tests {
             _state: <DummyGame as Game>::State,
             _deadline: SystemTime,
         ) -> <DummyGame as Game>::Action {
+            0
         }
     }
 
@@ -115,7 +121,7 @@ mod interface_tests {
     fn test_dyn_agent() {
         let game = DummyGame {};
         let mut agent = DummyAgent {};
-        assert_eq!((), get_agent_action(game.get_state(), &mut agent));
+        assert_eq!(0, get_agent_action(game.get_state(), &mut agent));
     }
 
     struct DummyFactory {}

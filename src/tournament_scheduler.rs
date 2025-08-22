@@ -8,21 +8,24 @@ use std::collections::HashMap;
 use std::mem;
 use std::sync::Arc;
 
-pub struct TournamentScheduler<S: TournamentStrategy> {
+pub struct TournamentScheduler<T: TournamentStrategy<S>, S>
+where
+    S: PartialOrd,
+{
     // pub agents: Vec<Arc<Agent>>,
-    scores: Vec<MatchResult>,
+    scores: Vec<MatchResult<S>>,
     resources: Constraints,
     pending_matches: Vec<Vec<Arc<Agent>>>,
-    strategy: S,
+    strategy: T,
     running_matches: usize,
     is_finished: bool,
 }
 
-impl<S: TournamentStrategy> TournamentScheduler<S> {
+impl<T: TournamentStrategy<S>, S: PartialOrd> TournamentScheduler<T, S> {
     pub fn new(
         // agents: Vec<Arc<Agent>>,
         resources: Constraints,
-        strategy: S,
+        strategy: T,
     ) -> Self {
         TournamentScheduler {
             // agents,
@@ -69,7 +72,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
         matches_to_run
     }
 
-    pub fn on_result(&mut self, result: RunnerResult) -> Vec<MatchSettings> {
+    pub fn on_result(&mut self, result: RunnerResult<S>) -> Vec<MatchSettings> {
         self.scores.push(result.results);
         self.resources.add(result.resources_freed);
         self.running_matches -= 1;
@@ -81,7 +84,7 @@ impl<S: TournamentStrategy> TournamentScheduler<S> {
         self.is_finished // self.strategy.is_complete() && self.pending_matches.is_empty() && self.running_matches == 0
     }
 
-    pub fn final_scores(&self) -> HashMap<Arc<Agent>, S::FinalScore> {
+    pub fn final_scores(&self) -> HashMap<Arc<Agent>, T::FinalScore> {
         self.strategy.get_final_scores()
     }
 }

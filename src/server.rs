@@ -54,7 +54,7 @@ use crate::tournament_scheduler::TournamentScheduler;
 use crate::tournament_strategy::TournamentStrategy;
 
 use std::collections::HashMap;
-use std::str::FromStr;
+use std::fmt::Display;
 use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc, Mutex};
 use tracing::{info, instrument, trace};
@@ -66,12 +66,9 @@ use tracing::{info, instrument, trace};
 /// # Type Parameters
 /// - `G`: The game type implementing [`Game`]
 /// - `F`: A factory implementing [`GameFactory<G>`]
-pub struct Evaluator<G, F>
+pub struct Evaluator<G: Game, F>
 where
-    G: Game,
     F: GameFactory<G>,
-    G::State: FromStr + ToString,
-    G::Action: FromStr + ToString,
 {
     factory: F,
     constraints: Constraints,
@@ -79,12 +76,7 @@ where
     _ff: std::marker::PhantomData<G>,
 }
 
-impl<G: Game, F: GameFactory<G>> Evaluator<G, F>
-where
-    G::State: FromStr + ToString,
-    G::Action: FromStr + ToString,
-    G: 'static + Send,
-{
+impl<G: Game + Send + 'static, F: GameFactory<G>> Evaluator<G, F> {
     #[instrument(skip_all)]
     /// Create an [`Evaluator`] with given [`Constraints`] and [`GameFactory`]
     pub fn new(factory: F, config: Configuration, constraints: Constraints) -> Evaluator<G, F> {
@@ -114,7 +106,7 @@ where
     ///
     /// # Errors
     /// Returns an error if the directory is invalid.
-    pub fn evaluate<T: TournamentStrategy>(
+    pub fn evaluate<T: TournamentStrategy<G::Score>>(
         &self,
         directory: impl AsRef<std::path::Path>,
         mut tournament: T,
@@ -171,10 +163,10 @@ where
         }));
     }
 
-    fn launch_initial_matches<T: TournamentStrategy>(
+    fn launch_initial_matches<T: TournamentStrategy<G::Score>>(
         &self,
-        scheduler: &mut TournamentScheduler<T>,
-        tx_result: &Sender<RunnerResult>,
+        scheduler: &mut TournamentScheduler<T, G::Score>,
+        tx_result: &Sender<RunnerResult<G::Score>>,
         running: &Arc<Mutex<Vec<MatchSettings>>>,
     ) {
         for m in scheduler.advance() {
@@ -182,8 +174,8 @@ where
         }
     }
 
-    fn collect_final_scores<T: TournamentStrategy>(
-        scheduler: &TournamentScheduler<T>,
+    fn collect_final_scores<T: TournamentStrategy<G::Score>>(
+        scheduler: &TournamentScheduler<T, G::Score>,
     ) -> HashMap<String, T::FinalScore> {
         scheduler
             .final_scores()
@@ -195,7 +187,7 @@ where
     fn launch_match(
         &self,
         match_settings: MatchSettings,
-        tx_result: Sender<RunnerResult>,
+        tx_result: Sender<RunnerResult<G::Score>>,
         running: &Arc<Mutex<Vec<MatchSettings>>>,
     ) {
         let game = self.factory.new_game();
@@ -231,14 +223,17 @@ where
     }
 }
 
-fn print_runner_result(match_settings: &MatchSettings, result: &RunnerResult) {
+fn print_runner_result<S: Display + PartialOrd>(
+    match_settings: &MatchSettings,
+    result: &RunnerResult<S>,
+) {
     let mut ordered_scores = Vec::new();
     for player in &match_settings.ordered_player {
         let name = &player.name;
         let res = result
             .results
             .iter()
-            .find_map(|a| if &a.0.name == name { Some(a.1) } else { None })
+            .find_map(|a| if &a.0.name == name { Some(&a.1) } else { None })
             .expect("agent not found");
         ordered_scores.push(res);
     }
