@@ -15,6 +15,8 @@ impl Game for DummyGame {
 
     type Action = u32;
 
+    type Score = u32;
+
     fn apply_action(&mut self, _action: &Option<Self::Action>) -> anyhow::Result<()> {
         self.got_none |= _action.is_none();
         Ok(())
@@ -29,11 +31,11 @@ impl Game for DummyGame {
         *self.counter.borrow() <= 0
     }
 
-    fn get_player_score(&self, _player_number: u32) -> f32 {
+    fn get_player_score(&self, _player_number: u32) -> u32 {
         if self.got_none {
-            0.0
+            0
         } else {
-            1.0
+            1
         }
     }
 
@@ -285,6 +287,8 @@ impl Game for RPSWrapper {
     type State = PlayerState;
 
     type Action = RpsAction;
+
+    type Score = f32;
 
     fn apply_action(&mut self, action: &Option<Self::Action>) -> anyhow::Result<()> {
         self.actions_buffer.push(*action);

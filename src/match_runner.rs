@@ -26,11 +26,14 @@ impl Display for MatchSettings {
     }
 }
 
-pub type MatchResult = Vec<(Arc<Agent>, f32)>;
+pub type MatchResult<S> = Vec<(Arc<Agent>, S)>;
 
 #[derive(Debug, Clone)]
-pub struct RunnerResult {
-    pub results: MatchResult,
+pub struct RunnerResult<S>
+where
+    S: PartialOrd,
+{
+    pub results: MatchResult<S>,
     pub resources_freed: Constraints,
     pub errors: String,
     // pub duration: Duration,
@@ -41,11 +44,7 @@ pub fn run_match<G: Game>(
     settings: MatchSettings,
     config: Configuration,
     mut game: G,
-) -> RunnerResult
-where
-    G::Action: FromStr + ToString,
-    G::State: ToString,
-{
+) -> RunnerResult<G::Score> {
     trace!("game started");
     let MatchSettings {
         ordered_player,
@@ -210,8 +209,8 @@ where
     let mut results = vec![];
     for (i, agent) in ordered_player.iter().enumerate() {
         let score = game.get_player_score(i as u32);
-        results.push((agent.clone(), score));
         result_str.push(score.to_string());
+        results.push((agent.clone(), score));
     }
 
     let result_str = result_str.join("-");

@@ -36,7 +36,7 @@ use crate::{agent::Agent, match_runner::MatchResult};
 /// - Generating matches to run per round
 /// - Processing match results
 /// - Producing a final score for each agent
-pub trait TournamentStrategy {
+pub trait TournamentStrategy<S: PartialOrd> {
     /// The score type produced at the end of the tournament.
     type FinalScore: Ord;
 
@@ -51,7 +51,7 @@ pub trait TournamentStrategy {
     /// If the returned list is empty, the tournament is finished.
     ///
     /// Each match is a list of agents (usually 2), and will be scored externally.
-    fn advance_round(&mut self, scores: Vec<MatchResult>) -> Vec<Vec<Arc<Agent>>>;
+    fn advance_round(&mut self, scores: Vec<MatchResult<S>>) -> Vec<Vec<Arc<Agent>>>;
 
     /// Returns the number of players per match required by this strategy.
     ///
@@ -159,7 +159,7 @@ impl SwissTournament {
         }
     }
 
-    fn update_scores(&mut self, match_results: Vec<MatchResult>) {
+    fn update_scores(&mut self, match_results: Vec<MatchResult<f32>>) {
         let mut pair_results: HashMap<(Arc<Agent>, Arc<Agent>), Vec<(f32, f32)>> =
             HashMap::with_capacity(match_results.len() / self.num_match_per_pair);
 
@@ -215,8 +215,8 @@ impl SwissTournament {
     }
 }
 
-impl TournamentStrategy for SwissTournament {
-    fn advance_round(&mut self, scores: Vec<MatchResult>) -> Vec<Vec<Arc<Agent>>> {
+impl TournamentStrategy<f32> for SwissTournament {
+    fn advance_round(&mut self, scores: Vec<MatchResult<f32>>) -> Vec<Vec<Arc<Agent>>> {
         self.update_scores(scores);
         self.update_tie_breakers();
 
@@ -316,21 +316,22 @@ impl RoundRobinTournament {
     }
 }
 
-impl TournamentStrategy for RoundRobinTournament {
-    fn advance_round(&mut self, scores: Vec<MatchResult>) -> Vec<Vec<Arc<Agent>>> {
+impl<S: PartialOrd> TournamentStrategy<S> for RoundRobinTournament {
+    fn advance_round(&mut self, scores: Vec<MatchResult<S>>) -> Vec<Vec<Arc<Agent>>> {
         for match_result in scores {
-            let best_score =
-                match_result.iter().fold(
-                    -f32::INFINITY,
-                    |acu, (_agent, score)| if acu < *score { *score } else { acu },
-                );
+            let mut best_score = &match_result[0].1;
+            for i in 1..match_result.len() {
+                if *best_score < match_result[i].1 {
+                    best_score = &match_result[i].1;
+                }
+            }
             let is_draw = match_result
                 .iter()
-                .all(|(_agent, score)| *score == best_score);
+                .all(|(_agent, score)| *score == *best_score);
             for (agent, score) in &match_result {
                 if is_draw {
                     self.scores.entry(agent.clone()).or_default().num_draw += 1;
-                } else if *score == best_score {
+                } else if *score == *best_score {
                     self.scores.entry(agent.clone()).or_default().num_win += 1;
                 } else
                 /* *score != best_score */
@@ -379,18 +380,24 @@ impl TournamentStrategy for RoundRobinTournament {
 /// Holds a list of scores for an agent in a single-player tournament.
 ///
 /// Implements ordering by comparison.
-#[derive(PartialEq, Debug, Clone, Default)]
-pub struct SinglePlayerScore(pub Vec<f32>);
+#[derive(PartialEq, PartialOrd, Debug, Clone)]
+pub struct SinglePlayerScore<S: PartialOrd>(pub Vec<S>);
 
-impl Eq for SinglePlayerScore {} // That's it ??
-
-impl PartialOrd for SinglePlayerScore {
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
+impl<S: PartialOrd> Default for SinglePlayerScore<S> {
+    fn default() -> Self {
+        Self(vec![])
     }
 }
 
-impl Ord for SinglePlayerScore {
+impl<S: PartialOrd> Eq for SinglePlayerScore<S> {} // That's it ??
+
+// impl PartialOrd for SinglePlayerScore {
+//     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+//         Some(self.cmp(other))
+//     }
+// }
+
+impl<S: PartialOrd> Ord for SinglePlayerScore<S> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         self.0.partial_cmp(&other.0).unwrap()
     }
@@ -399,13 +406,13 @@ impl Ord for SinglePlayerScore {
 /// A tournament where each agent plays independently across multiple games.
 ///
 /// Each agent is evaluated in isolation, and scores are stored as lists of `f32`.
-pub struct SinglePlayerTournament {
+pub struct SinglePlayerTournament<S: PartialOrd> {
     game_per_agent: usize,
     agents: Vec<Arc<Agent>>,
-    scores: HashMap<Arc<Agent>, SinglePlayerScore>,
+    scores: HashMap<Arc<Agent>, SinglePlayerScore<S>>,
 }
 
-impl SinglePlayerTournament {
+impl<S: PartialOrd> SinglePlayerTournament<S> {
     /// Creates a new single-player tournament.
     ///
     /// `game_per_agent` determines how many games each agent will play.
@@ -418,8 +425,8 @@ impl SinglePlayerTournament {
     }
 }
 
-impl TournamentStrategy for SinglePlayerTournament {
-    fn advance_round(&mut self, match_results: Vec<MatchResult>) -> Vec<Vec<Arc<Agent>>> {
+impl<S: PartialOrd + Clone> TournamentStrategy<S> for SinglePlayerTournament<S> {
+    fn advance_round(&mut self, match_results: Vec<MatchResult<S>>) -> Vec<Vec<Arc<Agent>>> {
         for match_result in match_results {
             for (agent, score) in match_result {
                 self.scores.entry(agent).or_default().0.push(score);
@@ -443,7 +450,7 @@ impl TournamentStrategy for SinglePlayerTournament {
         self.agents = agents;
     }
 
-    type FinalScore = SinglePlayerScore;
+    type FinalScore = SinglePlayerScore<S>;
 
     fn get_final_scores(&self) -> HashMap<Arc<Agent>, Self::FinalScore> {
         self.scores.clone()
