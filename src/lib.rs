@@ -163,7 +163,6 @@ mod agent;
 mod agent_collector;
 mod client_handler;
 pub mod configuration;
-mod confrontation;
 pub mod constraints;
 mod logger;
 mod match_runner;
