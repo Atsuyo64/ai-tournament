@@ -25,10 +25,10 @@
 - [x] swiss option: 'match-per-confrontation'
 - [ ] swiss prevent playing against same adversary
 - [ ] swiss prevent double bye
-- [ ] merging interface and cgroup manager into server ?
+- [x] merging interface and cgroup manager into server ?
 - [x] renaming server
 - [x] README + entry documentation
 - [x] log all matches to a file
-- [ ] cli args with clap (or other)
+- [ ] cli args with clap (or other) => wont do it: this is not a binary but a lib.
 - [x] cgroup + taskset fallback
 - [ ] test on Windows
