@@ -82,7 +82,7 @@ fn parse_yaml(yaml: &str) -> anyhow::Result<ConfigFile> {
             let value_part = rest[colon_pos + 1..].trim();
 
             // Value should start and end with double quotes
-            if !value_part.starts_with('"') || !value_part[1..].find('"').is_some() {
+            if !value_part.starts_with('"') || value_part[1..].find('"').is_none() {
                 bail!("Line {}: Value must be quoted with double quotes", i + 1);
             }
 

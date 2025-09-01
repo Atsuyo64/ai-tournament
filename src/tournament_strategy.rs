@@ -160,7 +160,7 @@ impl SwissTournament {
     }
 
     fn update_scores(&mut self, match_results: Vec<MatchResult<f32>>) {
-        let mut pair_results: HashMap<(Arc<Agent>, Arc<Agent>), Vec<(f32, f32)>> =
+        let mut pair_results: HashMap<_, Vec<_>> =
             HashMap::with_capacity(match_results.len() / self.num_match_per_pair);
 
         // 1. aggregate score per pair
@@ -324,9 +324,9 @@ impl<S: PartialOrd> TournamentStrategy<S> for RoundRobinTournament {
     fn advance_round(&mut self, scores: Vec<MatchResult<S>>) -> Vec<Vec<Arc<Agent>>> {
         for match_result in scores {
             let mut best_score = &match_result[0].1;
-            for i in 1..match_result.len() {
-                if *best_score < match_result[i].1 {
-                    best_score = &match_result[i].1;
+            for result in match_result.iter().skip(1) {
+                if best_score < &result.1 {
+                    best_score = &result.1;
                 }
             }
             let is_draw = match_result
@@ -384,7 +384,7 @@ impl<S: PartialOrd> TournamentStrategy<S> for RoundRobinTournament {
 /// Holds a list of scores for an agent in a single-player tournament.
 ///
 /// Implements ordering by comparison.
-#[derive(PartialEq, PartialOrd, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct SinglePlayerScore<S: PartialOrd>(pub Vec<S>);
 
 impl<S: PartialOrd> Default for SinglePlayerScore<S> {
@@ -395,11 +395,11 @@ impl<S: PartialOrd> Default for SinglePlayerScore<S> {
 
 impl<S: PartialOrd> Eq for SinglePlayerScore<S> {} // That's it ??
 
-// impl PartialOrd for SinglePlayerScore {
-//     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-//         Some(self.cmp(other))
-//     }
-// }
+impl<S: PartialOrd> PartialOrd for SinglePlayerScore<S> {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 impl<S: PartialOrd> Ord for SinglePlayerScore<S> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
