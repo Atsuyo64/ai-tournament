@@ -1,5 +1,6 @@
 target/
 .vscode/
+Cargo.lock
 
 # do not add [TIMESTAMP]_logs.txt
 *_log.txt

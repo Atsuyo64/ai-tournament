@@ -159,6 +159,7 @@ impl LimitedProcess {
     pub fn try_kill(&mut self, max_duration: Duration) -> anyhow::Result<()> {
         match &mut self.cgroup {
             Some(cgroup) => {
+                self.child.kill().context("could not kill child process")?; // start with (blocking) process kill
                 cgroup.kill().context("could not kill process")?;
                 wait_for_process_cleanup(cgroup, self.child.id() as u64, max_duration)
                     .context("process cleanup timed out")?;
@@ -171,7 +172,11 @@ impl LimitedProcess {
                 }
                 Ok(())
             }
-            None => self.child.kill().context("could not kill process"),
+            None => {
+                self.child.kill().context("could not kill process")?;
+                self.cleaned_up = true;
+                Ok(())
+            }
         }
     }
 
@@ -231,15 +236,22 @@ impl LimitedProcess {
 
 impl Drop for LimitedProcess {
     fn drop(&mut self) {
-        static CLEANUP_DURATION: Duration = Duration::from_millis(10);
+        static CLEANUP_DURATION: Duration = Duration::from_secs(1);
         if !self.cleaned_up {
             // warn!(
             //     "Process {} was not cleaned up before dropping. Trying to clean up for up to {:?}...",
             //     self.child.id(),
             //     CLEANUP_DURATION
             // );
-            self.try_kill(CLEANUP_DURATION)
-                .expect("could not kill process/cgroup on LimitedProcess::drop");
+            match self.try_kill(CLEANUP_DURATION) {
+                Ok(_) => { /* happy dance */ }
+                Err(e) => {
+                    if std::env::var("DEBUG_CGROUP").is_ok() {
+                        self.try_debug_cgroup();
+                    }
+                    panic!("could not kill process/cgroup on LimitedProcess::drop: {e}");
+                }
+            }
         }
     }
 }
