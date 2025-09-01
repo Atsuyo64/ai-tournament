@@ -25,7 +25,7 @@ use std::{
     sync::Arc,
 };
 
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::{agent::Agent, match_runner::MatchResult};
 
@@ -99,6 +99,7 @@ pub struct SwissTournament {
     max_rounds: usize,
     num_match_per_pair: usize,
     scores: HashMap<Arc<Agent>, (TwoPlayersGameScore, HashSet<Arc<Agent>>)>,
+    bye_history: HashSet<Arc<Agent>>,
 }
 
 impl SwissTournament {
@@ -136,6 +137,7 @@ impl SwissTournament {
             max_rounds,
             num_match_per_pair,
             scores: HashMap::new(),
+            bye_history: HashSet::new(),
         }
     }
 
@@ -217,6 +219,83 @@ impl SwissTournament {
             self.scores.get_mut(&b).unwrap().1.insert(a.clone());
         }
     }
+
+    fn has_played(&self, a: &Arc<Agent>, b: &Arc<Agent>) -> bool {
+        self.scores[a].1.contains(b)
+    }
+
+    fn create_next_round_pairings(&mut self) -> Vec<Vec<Arc<Agent>>> {
+        // 1. Group by score
+        // BTreeMap is used to auto-sort/group by score
+        let mut score_groups: std::collections::BTreeMap<i32, Vec<Arc<Agent>>> =
+            std::collections::BTreeMap::new();
+        for agent in &self.agents {
+            //FIXME: use tie breaker
+            let score = self.scores[agent].0.num_win * 2 + self.scores[agent].0.num_draw;
+            score_groups
+                .entry(score as i32)
+                .or_default()
+                .push(agent.clone());
+        }
+
+        // 2. Try to pair within each group
+        let mut pairings = vec![];
+        let mut leftovers = vec![];
+
+        for (_score, group) in score_groups.iter_mut().rev() {
+            // append leftovers from previous group to the next one
+            // BUT priority to same-group pairing (because `append` concatenate at the end)
+            group.append(&mut leftovers);
+
+            let mut i = 0;
+            while i + 1 < group.len() {
+                let a = &group[i];
+                let mut paired = false;
+
+                // greedy pairing: pair with the first valid opponent
+                for j in (i + 1)..group.len() {
+                    let b = &group[j];
+                    if !self.has_played(a, b) {
+                        pairings.push(vec![a.clone(), b.clone()]);
+                        // DO NOT SWAP the 2 following lines! (j > i)
+                        group.swap_remove(j); // remove b
+                        group.swap_remove(i); // remove a
+                        paired = true;
+                        break;
+                    }
+                }
+
+                // only increase i if no pair found, because otherwise 'current' group[i] was removed
+                if !paired {
+                    i += 1; // couldn't find a partner yet
+                }
+            }
+
+            // Any unpaired agent gets floated to the next group
+            leftovers.append(group);
+        }
+
+        // 3. Now what to do with those poor leftovers.... ????
+        //NOTE: all pair within laftovers have already be tested...
+        println!("leftovers: {leftovers:?}");
+
+        // 4. Assign bye to ALL unpaired player
+        for agent in leftovers {
+            if !self.bye_history.contains(&agent) {
+                warn!(
+                    "{} already received a bye — assigning second bye due to no valid opponents",
+                    agent.name
+                );
+            } else {
+                info!("{} receives a bye", agent.name);
+            }
+            // Give a bye
+            self.bye_history.insert(agent.clone());
+            self.scores.get_mut(&agent).unwrap().0.num_win += 1;
+        }
+        // 5. Return final matches
+        pairings
+    }
 }
 
 impl TournamentStrategy<f32> for SwissTournament {
@@ -228,38 +307,7 @@ impl TournamentStrategy<f32> for SwissTournament {
             return vec![];
         }
 
-        let mut sorted = self.agents.clone();
-        sorted.sort_by_key(|agent| cmp::Reverse(self.scores[agent].0));
-
-        //FIXME: prevent already-played match pairing
-        // Pair per score
-        let pending = sorted
-            .chunks(2)
-            .flat_map(|chunk| {
-                if chunk.len() == 2 {
-                    let a = &chunk[0];
-                    let b = &chunk[1];
-                    (0..self.num_match_per_pair)
-                        .map(|i| {
-                            // permute order for each match
-                            if i % 2 == 0 {
-                                vec![a.clone(), b.clone()]
-                            } else {
-                                vec![b.clone(), a.clone()]
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                    // Some(chunk.to_vec())
-                } else {
-                    // NOTE: According to standard Swiss rules, a player should not receive more than one bye.
-                    // We don’t enforce that here for simplicity, but it can be added by tracking byes per player.
-                    let a = &chunk[0];
-                    // Player has no opponent this round (bye). Award a free win but no tie-breaker.
-                    self.scores.get_mut(a).unwrap().0.num_win += 1;
-                    vec![] //no match for the last one (if odd num of players)
-                }
-            })
-            .collect::<Vec<_>>();
+        let pending = self.create_next_round_pairings();
 
         self.round += 1;
         pending
