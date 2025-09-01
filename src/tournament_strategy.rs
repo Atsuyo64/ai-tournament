@@ -197,6 +197,10 @@ impl SwissTournament {
                 .fold((0.0, 0.0), |acu, (score_a, score_b)| {
                     (acu.0 + score_a, acu.1 + score_b)
                 });
+            info!(
+                "Aggregated results {} VS {}: {score_a}-{score_b}",
+                a.name, b.name
+            );
             let is_draw = (score_a - score_b).abs() < f32::EPSILON;
             if is_draw {
                 self.scores.get_mut(&a).unwrap().0.num_draw += 1;
