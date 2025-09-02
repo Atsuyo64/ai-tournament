@@ -225,12 +225,12 @@ impl SwissTournament {
     }
 
     fn create_next_round_pairings(&mut self) -> Vec<Vec<Arc<Agent>>> {
-        // 1. Group by score
+        // Group by score
         // BTreeMap is used to auto-sort/group by score
         let mut score_groups: std::collections::BTreeMap<i32, Vec<Arc<Agent>>> =
             std::collections::BTreeMap::new();
         for agent in &self.agents {
-            //FIXME: use tie breaker
+            //FIXME: should also use tie breaker
             let score = self.scores[agent].0.num_win * 2 + self.scores[agent].0.num_draw;
             score_groups
                 .entry(score as i32)
@@ -238,7 +238,6 @@ impl SwissTournament {
                 .push(agent.clone());
         }
 
-        // 2. Try to pair within each group
         let mut pairings = vec![];
         let mut leftovers = vec![];
 
@@ -275,25 +274,30 @@ impl SwissTournament {
             leftovers.append(group);
         }
 
-        // 3. Now what to do with those poor leftovers.... ????
-        //NOTE: all pair within laftovers have already be tested...
-        println!("leftovers: {leftovers:?}");
+        // Now what do we do with those poor leftovers.... ????
+        //NOTE: all pair within laftovers have already been tested...
+        println!("Leftovers: {leftovers:?}");
 
-        // 4. Assign bye to ALL unpaired player
+        // Assign bye to ALL unpaired player
         for agent in leftovers {
             if !self.bye_history.contains(&agent) {
                 warn!(
                     "{} already received a bye — assigning second bye due to no valid opponents",
                     agent.name
                 );
+                println!(
+                    "{} already received a bye — assigning second bye due to no valid opponents",
+                    agent.name
+                )
             } else {
                 info!("{} receives a bye", agent.name);
+                println!("{} receives a bye", agent.name);
             }
             // Give a bye
             self.bye_history.insert(agent.clone());
             self.scores.get_mut(&agent).unwrap().0.num_win += 1;
         }
-        // 5. Return final matches
+
         pairings
     }
 }
