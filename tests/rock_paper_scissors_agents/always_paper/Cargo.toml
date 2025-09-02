@@ -1,13 +1,12 @@
 [package]
-name = "rocky_agent"
+name = "thin_agent"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-agent-interface = { path = "../../../../agent-interface" }
+ai-tournament = { path = "../../.." }
 
 [[bin]]
 name="eval"
 path="src/main.rs"
 
-[workspace]

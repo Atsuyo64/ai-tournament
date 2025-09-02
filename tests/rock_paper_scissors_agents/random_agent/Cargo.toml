@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 rand = "0.9.1"
-agent-interface = { path = "../../../../agent-interface" }
+ai-tournament = { path = "../../.." }
 
 [[bin]]
 name="eval"

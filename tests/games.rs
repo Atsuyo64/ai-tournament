@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 use std::vec;
 
+use ai_tournament::anyhow;
 use ai_tournament::game_interface::Game;
 use ai_tournament::game_interface::GameFactory;
 
