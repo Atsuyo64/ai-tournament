@@ -224,6 +224,19 @@ impl SwissTournament {
         self.scores[a].1.contains(b)
     }
 
+    fn create_pair_matches(&self, a: &Arc<Agent>, b: &Arc<Agent>) -> Vec<Vec<Arc<Agent>>> {
+        (0..self.num_match_per_pair)
+            .map(|i| {
+                //permute order for each match
+                if i % 2 == 0 {
+                    vec![a.clone(), b.clone()]
+                } else {
+                    vec![b.clone(), a.clone()]
+                }
+            })
+            .collect()
+    }
+
     fn create_next_round_pairings(&mut self) -> Vec<Vec<Arc<Agent>>> {
         // Group by score
         // BTreeMap is used to auto-sort/group by score
@@ -255,7 +268,10 @@ impl SwissTournament {
                 for j in (i + 1)..group.len() {
                     let b = &group[j];
                     if !self.has_played(a, b) {
-                        pairings.push(vec![a.clone(), b.clone()]);
+                        // create `self.num_match_per_pair` matches between a and b (switching
+                        // sides every other time)
+                        pairings.append(&mut self.create_pair_matches(a, b));
+
                         // DO NOT SWAP the 2 following lines! (j > i)
                         group.swap_remove(j); // remove b
                         group.swap_remove(i); // remove a
