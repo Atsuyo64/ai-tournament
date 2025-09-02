@@ -276,11 +276,14 @@ impl SwissTournament {
 
         // Now what do we do with those poor leftovers.... ????
         //NOTE: all pair within laftovers have already been tested...
-        println!("Leftovers: {leftovers:?}");
+        println!(
+            "Leftovers: {:?}",
+            leftovers.iter().map(|a| a.name.clone()).collect::<Vec<_>>()
+        );
 
         // Assign bye to ALL unpaired player
         for agent in leftovers {
-            if !self.bye_history.contains(&agent) {
+            if self.bye_history.contains(&agent) {
                 warn!(
                     "{} already received a bye — assigning second bye due to no valid opponents",
                     agent.name
