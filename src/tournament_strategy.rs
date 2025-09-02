@@ -21,7 +21,7 @@
 
 use std::{
     cmp,
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     sync::Arc,
 };
 
@@ -141,6 +141,58 @@ impl SwissTournament {
         }
     }
 
+    fn recursive_pairing_search(
+        &self,
+        ordered_players: &[Arc<Agent>],
+        out_pairs: &mut Vec<(Arc<Agent>, Arc<Agent>)>,
+        out_bye: &mut Option<Arc<Agent>>,
+    ) -> bool {
+        if ordered_players.is_empty() {
+            return true;
+        }
+
+        // Bye required when number of players is odd. Do it first to try from lowest score to highest (in swiss tournaments,
+        // byes are typically assigned to the lowest-ranked eligible player)
+        if ordered_players.len() % 2 == 1 {
+            assert!(out_bye.is_none());
+            // ordered from lowest to highest
+            for i in (0..ordered_players.len()).rev() {
+                let p = &ordered_players[i];
+                if !self.bye_history.contains(p) {
+                    let mut rest = ordered_players.to_vec();
+                    rest.remove(i); // no swap_remove! We want to preserve ordering
+                    if self.recursive_pairing_search(&rest, out_pairs, out_bye) {
+                        *out_bye = Some(p.clone());
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Else: even number of players, no bye allowed (max 1 bye/round)
+        for i in 1..ordered_players.len() {
+            let a = &ordered_players[0];
+            let b = &ordered_players[i];
+
+            // no double pairing
+            if self.has_played(a, b) {
+                continue;
+            }
+
+            let mut rest = Vec::with_capacity(ordered_players.len() - 2);
+            rest.extend_from_slice(&ordered_players[1..i]);
+            rest.extend_from_slice(&ordered_players[i + 1..]);
+
+            if self.recursive_pairing_search(&rest, out_pairs, out_bye) {
+                out_pairs.push((a.clone(), b.clone()));
+                return true;
+            }
+        }
+
+        false
+    }
+
     fn update_tie_breakers(&mut self) {
         // Median tie-breaker: for each player, tie-breaker is the sum of player's adversaries, minus extrema
         // https://en.wikipedia.org/wiki/Tie-breaking_in_Swiss-system_tournaments#Median_/_Buchholz_/_Solkoff
@@ -237,21 +289,24 @@ impl SwissTournament {
             .collect()
     }
 
-    fn create_next_round_pairings(&mut self) -> Vec<Vec<Arc<Agent>>> {
+    // The greedy search may end up with more than one bye, but is significantly faster and is sure
+    // to find something
+    fn greedy_pairing(
+        &self,
+        out_byes: &mut Vec<Arc<Agent>>,
+        out_pairs: &mut Vec<(Arc<Agent>, Arc<Agent>)>,
+    ) {
+        assert!(out_byes.is_empty(), "out_byes is an output");
+        assert!(out_pairs.is_empty(), "out_pairs is an output");
+
         // Group by score
-        // BTreeMap is used to auto-sort/group by score
-        let mut score_groups: std::collections::BTreeMap<i32, Vec<Arc<Agent>>> =
-            std::collections::BTreeMap::new();
+        // BTreeMap is used to auto-group by sorted scores
+        let mut score_groups: BTreeMap<_, Vec<_>> = BTreeMap::new();
         for agent in &self.agents {
-            //FIXME: should also use tie breaker
             let score = self.scores[agent].0.num_win * 2 + self.scores[agent].0.num_draw;
-            score_groups
-                .entry(score as i32)
-                .or_default()
-                .push(agent.clone());
+            score_groups.entry(score as i32).or_default().push(agent);
         }
 
-        let mut pairings = vec![];
         let mut leftovers = vec![];
 
         for (_score, group) in score_groups.iter_mut().rev() {
@@ -261,17 +316,14 @@ impl SwissTournament {
 
             let mut i = 0;
             while i + 1 < group.len() {
-                let a = &group[i];
+                let a = group[i];
                 let mut paired = false;
 
                 // greedy pairing: pair with the first valid opponent
                 for j in (i + 1)..group.len() {
-                    let b = &group[j];
+                    let b = group[j];
                     if !self.has_played(a, b) {
-                        // create `self.num_match_per_pair` matches between a and b (switching
-                        // sides every other time)
-                        pairings.append(&mut self.create_pair_matches(a, b));
-
+                        out_pairs.push((a.clone(), b.clone()));
                         // DO NOT SWAP the 2 following lines! (j > i)
                         group.swap_remove(j); // remove b
                         group.swap_remove(i); // remove a
@@ -286,38 +338,82 @@ impl SwissTournament {
                 }
             }
 
-            // Any unpaired agent gets floated to the next group
+            // Any unpaired agent gets floated to the next (lower) group
             leftovers.append(group);
         }
 
-        // Now what do we do with those poor leftovers.... ????
-        //NOTE: all pair within laftovers have already been tested...
-        println!(
-            "Leftovers: {:?}",
-            leftovers.iter().map(|a| a.name.clone()).collect::<Vec<_>>()
-        );
+        //NOTE: at this point, all pair within leftovers have already been tested
 
         // Assign bye to ALL unpaired player
         for agent in leftovers {
-            if self.bye_history.contains(&agent) {
-                warn!(
-                    "{} already received a bye — assigning second bye due to no valid opponents",
-                    agent.name
-                );
-                println!(
-                    "{} already received a bye — assigning second bye due to no valid opponents",
-                    agent.name
-                )
-            } else {
-                info!("{} receives a bye", agent.name);
-                println!("{} receives a bye", agent.name);
-            }
             // Give a bye
-            self.bye_history.insert(agent.clone());
-            self.scores.get_mut(&agent).unwrap().0.num_win += 1;
+            out_byes.push(agent.clone());
         }
+    }
 
-        pairings
+    fn apply_bye(&mut self, a: Arc<Agent>) {
+        if self.bye_history.contains(&a) {
+            warn!(
+                "{} already received a bye — assigning second bye due to no valid opponents",
+                a.name
+            );
+            // println!(
+            //     "{} already received a bye — assigning second bye due to no valid opponents",
+            //     a.name
+            // )
+        } else {
+            info!("{} receives a bye", a.name);
+            // println!("{} receives a bye", a.name);
+        }
+        self.scores.get_mut(&a).unwrap().0.num_win += 1;
+        self.bye_history.insert(a);
+    }
+
+    fn create_next_round_pairings(&mut self) -> Vec<(Arc<Agent>, Arc<Agent>)> {
+        let mut ordered_agents = self.agents.clone();
+        ordered_agents.sort_by(|a, b| {
+            let sa = &self.scores[a].0;
+            let sb = &self.scores[b].0;
+            let score_a = sa.num_win * 2 + sa.num_draw;
+            let score_b = sb.num_win * 2 + sb.num_draw;
+            score_b
+                .cmp(&score_a)
+                .then(sb.tie_breaker.cmp(&sa.tie_breaker))
+        });
+
+        let mut pairs = Vec::with_capacity(self.agents.len() / 2);
+        let mut bye = None;
+
+        // See swiss_tests::test_advance_round_scaling for bench tests
+        // let start = std::time::Instant::now();
+        let success = self.recursive_pairing_search(&ordered_agents, &mut pairs, &mut bye);
+        // println!("Recursive pairing took {:?}", start.elapsed());
+
+        if success {
+            if let Some(agent) = bye {
+                self.apply_bye(agent);
+            }
+            pairs
+        } else {
+            // fallback to greedy pairing
+            println!("Recursive pairing failed. Using greedy fallback");
+
+            let mut byes = vec![];
+
+            assert!(pairs.len() == 0);
+            // pairs.clear();
+
+            self.greedy_pairing(&mut byes, &mut pairs);
+
+            if byes.len() > 1 {
+                println!(
+                    "Greedy pairing could not pair those: {:?}",
+                    byes.iter().map(|a| a.name.clone()).collect::<Vec<_>>()
+                );
+            }
+
+            pairs
+        }
     }
 }
 
@@ -330,7 +426,11 @@ impl TournamentStrategy<f32> for SwissTournament {
             return vec![];
         }
 
-        let pending = self.create_next_round_pairings();
+        let pairs = self.create_next_round_pairings();
+        let mut pending = Vec::with_capacity(pairs.len() * self.num_match_per_pair);
+        for (a, b) in pairs {
+            pending.extend(self.create_pair_matches(&a, &b));
+        }
 
         self.round += 1;
         pending
@@ -366,6 +466,125 @@ impl TournamentStrategy<f32> for SwissTournament {
             .iter()
             .map(|(agent, (score, _adv))| (agent.clone(), *score))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod swiss_tests {
+    use std::{collections::HashSet, sync::Arc, time::Instant};
+
+    use crate::{
+        agent::Agent,
+        match_runner::MatchResult,
+        tournament_strategy::{SwissTournament, TournamentStrategy},
+    };
+
+    fn make_agents(n: u32) -> Vec<Arc<Agent>> {
+        (0..n)
+            .map(|i| Arc::new(Agent::new(format!("agent_{}", i), None, i, None)))
+            .collect()
+    }
+
+    /// Simulates a match: higher ID wins.
+    fn simulate_round(matchups: &[Vec<Arc<Agent>>]) -> Vec<MatchResult<f32>> {
+        matchups
+            .iter()
+            .map(|pair| {
+                let a = &pair[0];
+                let b = &pair[1];
+
+                let (score_a, score_b) = if a.id > b.id {
+                    (1.0, 0.0)
+                } else if a.id < b.id {
+                    (0.0, 1.0)
+                } else {
+                    (0.5, 0.5)
+                };
+
+                vec![(a.clone(), score_a), (b.clone(), score_b)]
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_basic_swiss_tournament_progression() {
+        let agents = make_agents(63);
+
+        let mut swiss = SwissTournament::new(8, 1);
+        swiss.add_agents(agents.clone());
+
+        let mut all_matchups = HashSet::new();
+        let mut round_count = 0;
+        let mut results = vec![];
+
+        loop {
+            let matchups = swiss.advance_round(results.clone());
+            if matchups.is_empty() {
+                println!("Tournament finished.");
+                break;
+            }
+            round_count += 1;
+
+            println!("\n=== Round {round_count} ===");
+            for pair in &matchups {
+                println!("{} VS {}", pair[0].name, pair[1].name);
+                let ids = (pair[0].id.min(pair[1].id), pair[0].id.max(pair[1].id));
+                assert!(
+                    !all_matchups.contains(&ids),
+                    "Repeated matchup detected: {:?}",
+                    ids
+                );
+                all_matchups.insert(ids);
+            }
+
+            results = simulate_round(&matchups);
+        }
+
+        let scores = swiss.get_final_scores();
+        println!(
+            "\n== Final Scores ({round_count}/{} rounds) ==",
+            swiss.max_rounds
+        );
+        let mut leaderboard: Vec<_> = scores.iter().collect();
+        leaderboard.sort_by_key(|(_, score)| -(score.num_win as i32 * 2 + score.num_draw as i32));
+
+        for (index, (agent, score)) in leaderboard.iter().enumerate() {
+            let _rank = agents.len() - index - 1;
+            // println!("{_rank}, {_rank}, {}", &agent.name["agent_".len()..]); // csv output
+            println!(
+                "{}: {}-{}-{} (tiebreaker: {})",
+                agent.name, score.num_win, score.num_draw, score.num_lose, score.tie_breaker
+            );
+        }
+    }
+
+    /// Runs the full Swiss tournament with increasing player count,
+    /// and prints the total time taken for each size.
+    ///
+    /// Results: on a average machine, takes <1s for 1024 players. Conclusion: this is negligible
+    #[test]
+    fn test_advance_round_scaling() {
+        let player_counts = 2..=128;
+
+        for n in player_counts {
+            let agents = make_agents(n);
+            let mut swiss = SwissTournament::with_auto_rounds(1);
+            swiss.add_agents(agents.clone());
+
+            let start = Instant::now();
+
+            let mut round = 0;
+            let mut matchups = swiss.advance_round(vec![]);
+            while !matchups.is_empty() {
+                let results = simulate_round(&matchups);
+                matchups = swiss.advance_round(results);
+                round += 1;
+            }
+
+            let elapsed = start.elapsed();
+            println!("Swiss tournament with {n:>3} players ({round:>2} rounds), took {elapsed:?}");
+            // println!("{n:>3}, {}", elapsed.as_micros()); //csv ouput
+        }
     }
 }
 
