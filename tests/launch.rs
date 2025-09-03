@@ -73,8 +73,7 @@ fn launch_dummy() {
 
     let config = Configuration::new()
         .with_verbose(verbose_mode)
-        .with_allow_uncontained(true)
-        .with_log(false);
+        .with_allow_uncontained(true);
 
     let evaluator = Evaluator::new(DummyFactory {}, config, params);
     let path = "tests/dummy_agents";
@@ -98,8 +97,7 @@ fn launch_rock_paper_scissors() {
     let config = Configuration::new()
         .with_test_all_configs(true)
         .with_debug_agent_stderr(false)
-        .with_verbose(verbose_mode)
-        .with_log(false);
+        .with_verbose(verbose_mode);
 
     let evaluator = Evaluator::new(RPSWrapper::default(), config, params);
     let path = "tests/rock_paper_scissors_agents";

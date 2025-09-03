@@ -42,7 +42,7 @@ where
 #[instrument(skip_all,fields(%settings,cpus=?settings.resources.cpus))]
 pub fn run_match<G: Game>(
     settings: MatchSettings,
-    config: Configuration,
+    config: &Configuration,
     mut game: G,
 ) -> RunnerResult<G::Score> {
     trace!("game started");

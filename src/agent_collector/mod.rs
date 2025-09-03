@@ -19,7 +19,7 @@ mod config_file_utils;
 #[instrument(skip(config))]
 pub fn collect_agents(
     directory: impl AsRef<Path> + std::fmt::Debug,
-    config: Configuration,
+    config: &Configuration,
 ) -> anyhow::Result<Vec<Arc<Agent>>> {
     let verbose = config.verbose;
     let compile = config.compile_agents;

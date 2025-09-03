@@ -80,7 +80,8 @@ impl<G: Game + Send + 'static, F: GameFactory<G>> Evaluator<G, F> {
     #[instrument(skip_all)]
     /// Create an [`Evaluator`] with given [`Constraints`] and [`GameFactory`]
     pub fn new(factory: F, config: Configuration, constraints: Constraints) -> Evaluator<G, F> {
-        if config.log {
+        if config.is_logging_enabled() {
+            //FIXME: do it inside chosen folder
             init_logger();
         }
 
@@ -121,7 +122,7 @@ impl<G: Game + Send + 'static, F: GameFactory<G>> Evaluator<G, F> {
         }
 
         // 2. get agents name & code in *directory*
-        let agents = collect_agents(directory.as_ref(), self.config)?;
+        let agents = collect_agents(directory.as_ref(), &self.config)?;
         info!(?agents);
 
         // 3. add agents to tournament
@@ -200,9 +201,9 @@ impl<G: Game + Send + 'static, F: GameFactory<G>> Evaluator<G, F> {
         }
         drop(guard);
 
-        let config = self.config;
+        let config = self.config.clone();
         std::thread::spawn(move || {
-            let result = run_match(match_settings.clone(), config, game);
+            let result = run_match(match_settings.clone(), &config, game);
 
             if config.verbose {
                 print_runner_result(&match_settings, &result);
