@@ -1,6 +1,7 @@
 use std::{
+    fs,
     io::Write,
-    path::{Path, PathBuf},
+    path::{self, Path, PathBuf},
     sync::Arc,
 };
 
@@ -78,6 +79,12 @@ pub fn collect_agents(
             .into_string()
             .unwrap();
 
+        let log_path = if config.is_logging_enabled() {
+            create_log_subdir(config, &name)
+        } else {
+            todo!()
+        };
+
         if verbose {
             if compile {
                 print!("Compiling {name:·<longest_name$} ");
@@ -95,11 +102,19 @@ pub fn collect_agents(
             continue;
         }
 
-        let res = if compile {
+        let (res, compilation_output) = if compile {
             agent_compiler::compile_single_agent(&subdir)
         } else {
-            collect_binary(&subdir)
+            (collect_binary(&subdir), "".to_owned())
         };
+
+        if config.is_logging_enabled() {
+            let path = log_path.join("compilation.txt");
+            let mut file = fs::File::create(&path)
+                .expect(&format!("could not create file {}", path.display()));
+            file.write_all(compilation_output.as_bytes())
+                .expect(&format!("could not write to file {}", path.display()));
+        }
 
         let Ok(res) = res else {
             // compile => already logged
@@ -180,6 +195,40 @@ pub fn collect_agents(
     }
 
     Ok(vec)
+}
+
+fn create_log_subdir(config: &Configuration, name: &str) -> PathBuf {
+    let path = config.log_dir.as_ref().unwrap().join(name);
+
+    if path.exists() {
+        if !path.is_dir() {
+            panic!("Path '{}' exists but is not a directory.", path.display());
+        }
+
+        // Remove everything inside the directory
+        for entry in fs::read_dir(&path).expect("Failed to read directory contents") {
+            let entry = entry.expect("Failed to read entry");
+            let entry_path = entry.path();
+            if entry_path.is_dir() {
+                fs::remove_dir_all(&entry_path).unwrap_or_else(|e| {
+                    panic!(
+                        "Failed to remove directory '{}': {}",
+                        entry_path.display(),
+                        e
+                    )
+                });
+            } else {
+                fs::remove_file(&entry_path).unwrap_or_else(|e| {
+                    panic!("Failed to remove file '{}': {}", entry_path.display(), e)
+                });
+            }
+        }
+    } else {
+        // Create the directory (including parents)
+        fs::create_dir_all(&path)
+            .unwrap_or_else(|e| panic!("Failed to create directory '{}': {}", path.display(), e));
+    }
+    path
 }
 
 #[instrument]
