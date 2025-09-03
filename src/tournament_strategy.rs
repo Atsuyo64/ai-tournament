@@ -22,6 +22,7 @@
 use std::{
     cmp,
     collections::{BTreeMap, HashMap, HashSet},
+    iter::Sum,
     sync::Arc,
 };
 
@@ -38,7 +39,7 @@ use crate::{agent::Agent, match_runner::MatchResult};
 /// - Producing a final score for each agent
 pub trait TournamentStrategy<S: PartialOrd> {
     /// The score type produced at the end of the tournament.
-    type FinalScore: Ord;
+    type FinalScore;
 
     /// Adds a list of agents to the tournament.
     ///
@@ -748,6 +749,70 @@ impl<S: PartialOrd + Clone> TournamentStrategy<S> for SinglePlayerTournament<S> 
 
     fn get_final_scores(&self) -> HashMap<Arc<Agent>, Self::FinalScore> {
         self.scores.clone()
+    }
+}
+
+/// This tournament will run each non-reference agent against each reference agent.
+/// Because of technical constraints, all agent including references should be in the same
+/// directory. Therefor, a filter is necessary allow to separate them based of their name.
+pub struct EvalAgainstReferences<S: PartialOrd, F: Fn(&str) -> bool> {
+    pending: Vec<Vec<Arc<Agent>>>,
+    score: Vec<Vec<(String, S)>>,
+    reference_filter: F,
+    match_per_pair: u32,
+}
+
+impl<S: PartialOrd> EvalAgainstReferences<S> {
+    /// Creates an `EvalAgainstReferences` tournament.
+    /// This tournament will run each non-reference agent against each reference agent.
+    /// Because of technical constraints, all agent including references should be in the same
+    /// directory. Therefor, `reference_filter` allow to separate them by returning `true` when
+    /// given the name of a reference agent, and `false` otherwise.
+    ///
+    /// Example:
+    /// reference_filter could filter every name starting with "ref_", or with a name within a
+    /// premade list.
+    pub fn new<F: Fn(&str) -> bool>(reference_filter: F, match_per_pair: u32) -> Self {
+        Self {
+            pending: Vec::new(),
+            score: Vec::new(),
+            reference_filter,
+            match_per_pair,
+        }
+    }
+}
+
+impl<S: PartialOrd, F: Fn(&str) -> bool> TournamentStrategy<S> for EvalAgainstReferences<S, F> {
+    type FinalScore = u32;
+
+    fn add_agents(&mut self, agents: Vec<Arc<Agent>>) {
+        let mut reference_agents = vec![];
+        let mut other_agents = vec![];
+
+        for agent in agents {
+            if (self.reference_filter)(&agent.name) {
+                reference_agents.push(agent.clone());
+            } else {
+                other_agents.push(agent.clone());
+            }
+        }
+
+        assert!(self.pending.is_empty());
+        for a in &other_agents {
+            for b in &reference_agents {}
+        }
+    }
+
+    fn advance_round(&mut self, scores: Vec<MatchResult<S>>) -> Vec<Vec<Arc<Agent>>> {
+        todo!()
+    }
+
+    fn players_per_match(&self) -> usize {
+        todo!()
+    }
+
+    fn get_final_scores(&self) -> HashMap<Arc<Agent>, Self::FinalScore> {
+        todo!()
     }
 }
 
