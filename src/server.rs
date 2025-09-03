@@ -80,9 +80,8 @@ impl<G: Game + Send + 'static, F: GameFactory<G>> Evaluator<G, F> {
     #[instrument(skip_all)]
     /// Create an [`Evaluator`] with given [`Constraints`] and [`GameFactory`]
     pub fn new(factory: F, config: Configuration, constraints: Constraints) -> Evaluator<G, F> {
-        if config.is_logging_enabled() {
-            //FIXME: do it inside chosen folder
-            init_logger();
+        if let Some(path) = &config.log_dir {
+            init_logger(path);
         }
 
         // trace!("config: {:?}\nconstraints: {:?}", &config, &constraints);

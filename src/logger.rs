@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File, path::Path};
 
 use time::{
     format_description::{self, parse},
@@ -8,9 +8,10 @@ use tracing::{subscriber::set_global_default, Level};
 use tracing_subscriber::{fmt::writer::BoxMakeWriter, FmtSubscriber};
 
 /// Will panic on error
-pub fn init_logger() {
+pub fn init_logger(path: &Path) {
     let file_name = get_log_file_name();
-    let file = File::create(file_name).unwrap();
+    let file_path = path.join(file_name);
+    let file = File::create(file_path).unwrap();
     let writer = BoxMakeWriter::new(file);
     let local_offset = time::UtcOffset::current_local_offset().unwrap();
     let timer = tracing_subscriber::fmt::time::OffsetTime::new(
