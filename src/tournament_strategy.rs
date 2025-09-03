@@ -481,7 +481,7 @@ mod swiss_tests {
 
     fn make_agents(n: u32) -> Vec<Arc<Agent>> {
         (0..n)
-            .map(|i| Arc::new(Agent::new(format!("agent_{}", i), None, i, None)))
+            .map(|i| Arc::new(Agent::new(format!("agent_{}", i), None, None, i, None)))
             .collect()
     }
 

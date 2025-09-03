@@ -153,11 +153,6 @@ impl Configuration {
     pub(crate) fn is_logging_enabled(&self) -> bool {
         self.log_dir.is_some()
     }
-
-    /// Returns the log directory path, if logging is enabled.
-    pub(crate) fn log_directory(&self) -> Option<&Path> {
-        self.log_dir.as_deref()
-    }
 }
 
 impl Default for Configuration {

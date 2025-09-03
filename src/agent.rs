@@ -4,6 +4,7 @@ use std::path::PathBuf;
 pub struct Agent {
     pub name: String,
     pub path_to_exe: Option<PathBuf>,
+    pub path_to_log_dir: Option<PathBuf>,
     pub id: u32,
     pub compile: bool,
     pub args: Option<Vec<String>>,
@@ -14,6 +15,7 @@ impl Agent {
     pub fn new(
         name: String,
         path_to_exe: Option<PathBuf>,
+        path_to_log_dir: Option<PathBuf>,
         id: u32,
         args: Option<Vec<String>>,
     ) -> Agent {
@@ -21,6 +23,7 @@ impl Agent {
             name,
             compile: path_to_exe.is_some(),
             path_to_exe,
+            path_to_log_dir,
             id, // scores: vec![],
             args,
         }

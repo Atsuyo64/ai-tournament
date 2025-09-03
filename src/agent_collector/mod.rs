@@ -1,7 +1,7 @@
 use std::{
     fs,
     io::Write,
-    path::{self, Path, PathBuf},
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -80,9 +80,9 @@ pub fn collect_agents(
             .unwrap();
 
         let log_path = if config.is_logging_enabled() {
-            create_log_subdir(config, &name)
+            Some(create_log_subdir(config, &name))
         } else {
-            todo!()
+            None
         };
 
         if verbose {
@@ -108,7 +108,7 @@ pub fn collect_agents(
             (collect_binary(&subdir), "".to_owned())
         };
 
-        if config.is_logging_enabled() {
+        if let Some(log_path) = log_path.as_ref() {
             let path = log_path.join("compilation.txt");
             let mut file = fs::File::create(&path)
                 .expect(&format!("could not create file {}", path.display()));
@@ -155,6 +155,7 @@ pub fn collect_agents(
                 vec.push(Arc::new(Agent::new(
                     name.clone() + "-" + &config_name,
                     Some(res.clone()),
+                    log_path.clone(),
                     ids,
                     Some(args),
                 )));
@@ -184,7 +185,13 @@ pub fn collect_agents(
                 continue;
             };
 
-            vec.push(Arc::new(Agent::new(name, Some(res), ids, Some(args))));
+            vec.push(Arc::new(Agent::new(
+                name,
+                Some(res),
+                log_path,
+                ids,
+                Some(args),
+            )));
         }
 
         if verbose {
