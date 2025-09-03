@@ -11,7 +11,6 @@ readme = "README.md"
 exclude = ["tests/"] # those tests requires agent crates which have not point being published
 
 [dependencies]
-cgroups-rs = "0.3.4"
 anyhow = "1.0"
 sysinfo = "0.35.2"
 tracing = "0.1.41"
@@ -23,3 +22,7 @@ time = { version = "0.3.41", features = ["formatting", "local-offset"] }
 version = "0.3.19"
 default-features = false
 features = ["std", "registry", "fmt", "ansi"] 
+
+[target.'cfg(target_os = "linux")'.dependencies]
+cgroups-rs = "0.3.4"
+

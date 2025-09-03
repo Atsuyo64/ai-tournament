@@ -1,10 +1,12 @@
 use std::{
-    process::{Child, Stdio},
+    process::Child,
     time::{Duration, Instant},
 };
 
 use anyhow::{self, Context};
 use cgroups_rs::Cgroup;
+
+use super::create_process;
 
 pub fn get_current_user_id() -> anyhow::Result<String> {
     let output = std::process::Command::new("id")
@@ -80,16 +82,6 @@ pub fn wait_for_process_cleanup(
         std::thread::sleep(std::cmp::min(Duration::from_millis(10), max_duration / 10));
     }
     Ok(())
-}
-
-fn create_process(command: &str, args: &[String], allow_stderr: bool) -> anyhow::Result<Child> {
-    let mut cmd = std::process::Command::new(command);
-    cmd.args(args).stdin(Stdio::null()).stdout(Stdio::null());
-    if !allow_stderr {
-        cmd.stderr(Stdio::null());
-    }
-    cmd.spawn()
-        .with_context(|| format!("command '{command}' not found"))
 }
 
 pub fn create_process_in_cgroup(
