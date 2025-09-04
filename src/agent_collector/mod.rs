@@ -137,8 +137,8 @@ pub fn collect_agents(
                 continue;
             };
 
-            for (config_name, config) in configs {
-                let args = config_file_utils::get_args_from_config(&config);
+            for (config_name, conf) in configs {
+                let args = config_file_utils::get_args_from_config(&conf);
                 let Ok(args) = args else {
                     warn!(
                         "Config '{config_name}' error: {}",
@@ -152,10 +152,17 @@ pub fn collect_agents(
                     }
                     continue;
                 };
+                let agent_name = format!("{name}-{config_name}");
+                let config_log_path = if config.is_logging_enabled() {
+                    Some(create_log_subdir(config, &agent_name))
+                } else {
+                    None
+                };
+
                 vec.push(Arc::new(Agent::new(
-                    name.clone() + "-" + &config_name,
+                    agent_name,
                     Some(res.clone()),
-                    log_path.clone(),
+                    config_log_path,
                     ids,
                     Some(args),
                 )));

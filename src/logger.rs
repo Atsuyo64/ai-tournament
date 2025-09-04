@@ -26,7 +26,9 @@ pub fn init_logger(path: &Path) {
         .with_writer(writer)
         .finish();
 
-    set_global_default(subscriber).expect("Could not set global default tracing subscriber. Consider disabling logs if you are already setting a subscriber.");
+    if let Err(_) = set_global_default(subscriber) {
+        println!("WARNING: Could not set global default tracing subscriber. Consider disabling logs if you are already setting a subscriber.");
+    }
 }
 
 fn get_log_file_name() -> String {
