@@ -104,10 +104,16 @@ impl Configuration {
     /// This method will panic if the provided path is not a valid directory.
     pub fn with_log<P: AsRef<Path>>(mut self, path: P) -> Self {
         let path = path.as_ref();
-        //TODO: create dir if path is valid and directory does not exists
+
+        if !path.exists() {
+            std::fs::create_dir(&path)
+                .expect(&format!("Could not create directory {}", path.display()));
+        }
+
         if !path.is_dir() {
             panic!("Logging path must be a valid directory: {}", path.display());
         }
+
         self.log_dir = Some(path.to_path_buf());
         self
     }
