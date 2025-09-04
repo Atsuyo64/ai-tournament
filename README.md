@@ -1,5 +1,7 @@
 # ai-tournament
 
+![Build and test CI badge](https://github.com/Atsuyo64/ai-tournament/actions/workflows/buildandtest.yml/badge.svg)
+
 A modular Rust crate system for evaluating AI agents via customizable tournaments, supporting sandboxed execution and flexible constraints.
 
 ## Overview
