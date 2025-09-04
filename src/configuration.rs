@@ -99,19 +99,52 @@ impl Configuration {
 
     /// Enable logging to the given directory path.
     ///
+    /// # Warning
+    ///
+    /// **This method will permanently delete all contents (files and subdirectories)**
+    /// in the specified directory before using it for logging. Make absolutely sure
+    /// that the provided path does not point to a directory containing important data.
+    ///
     /// # Panics
     ///
-    /// This method will panic if the provided path is not a valid directory.
+    /// - Panics if the provided path is not a valid directory and cannot be created.
+    /// - Panics if it fails to delete any contents in the directory.
     pub fn with_log<P: AsRef<Path>>(mut self, path: P) -> Self {
         let path = path.as_ref();
 
         if !path.exists() {
             std::fs::create_dir(&path)
-                .expect(&format!("Could not create directory {}", path.display()));
+                .unwrap_or_else(|e| panic!("Could not create directory {}: {}", path.display(), e));
         }
 
         if !path.is_dir() {
             panic!("Logging path must be a valid directory: {}", path.display());
+        }
+
+        // WARNING: Delete all contents inside the directory
+        for entry in std::fs::read_dir(path).unwrap_or_else(|e| {
+            panic!(
+                "Failed to read contents of directory {}: {}",
+                path.display(),
+                e
+            )
+        }) {
+            let entry = entry.unwrap();
+            let entry_path = entry.path();
+
+            if entry_path.is_symlink() {
+                std::fs::remove_file(&entry_path).unwrap_or_else(|e| {
+                    panic!("Failed to remove simlink {}: {}", entry_path.display(), e);
+                });
+            } else if entry_path.is_dir() {
+                std::fs::remove_dir_all(&entry_path).unwrap_or_else(|e| {
+                    panic!("Failed to remove directory {}: {}", entry_path.display(), e)
+                });
+            } else {
+                std::fs::remove_file(&entry_path).unwrap_or_else(|e| {
+                    panic!("Failed to remove file {}: {}", entry_path.display(), e)
+                });
+            }
         }
 
         self.log_dir = Some(path.to_path_buf());

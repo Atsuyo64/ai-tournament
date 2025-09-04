@@ -14,8 +14,8 @@ pub fn compile_single_agent(dir: &Path) -> (anyhow::Result<PathBuf>, String) {
         "--release",
         "--bin",
         BIN_NAME,
-        "--message-format",
-        "short",
+        // "--message-format",
+        // "short",
     ];
 
     let proc = std::process::Command::new("cargo")
@@ -33,8 +33,7 @@ pub fn compile_single_agent(dir: &Path) -> (anyhow::Result<PathBuf>, String) {
         + "\n"
         + std::str::from_utf8(&output.stderr).unwrap();
     if output.status.success() {
-        let path = dir.join("target/release/").join(BIN_NAME);
-        //FIXME: on Windows: BIN_NAME.join(".exe") or something link that
+        let path = dir.join("target/release/").join(BIN_NAME); // works even on windows since '.exe' is optional in commands
         (Ok(path), result)
     } else {
         let output = &output.stderr;
