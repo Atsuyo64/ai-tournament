@@ -1,4 +1,5 @@
 use std::{
+    fs::File,
     process::Child,
     time::{Duration, Instant},
 };
@@ -89,8 +90,9 @@ pub fn create_process_in_cgroup(
     args: &[String],
     group: &cgroups_rs::Cgroup,
     allow_stderr: bool,
+    log_file: &Option<File>,
 ) -> anyhow::Result<std::process::Child> {
-    let mut child = create_process(command, args, allow_stderr)?;
+    let mut child = create_process(command, args, allow_stderr, log_file)?;
 
     let pid = child.id() as u64;
     let addition = group.add_task_by_tgid(cgroups_rs::CgroupPid { pid });
@@ -124,6 +126,7 @@ impl LimitedProcess {
         max_memory: i64,
         cpus: &str,
         allow_stderr: bool,
+        log_file: &Option<File>,
     ) -> anyhow::Result<LimitedProcess> {
         static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1); // lazy cell ? (if multiple evaluations at the same time !)
         let user_id = get_current_user_id().context("could not get user id")?;
@@ -135,8 +138,8 @@ impl LimitedProcess {
         let path = get_cgroup_path(&user_id, &group_name);
         let group =
             create_cgroup(&path, max_memory, 100, cpus).context("could not create cgroup")?;
-        let child =
-            create_process_in_cgroup(command, args, &group, allow_stderr).with_context(|| {
+        let child = create_process_in_cgroup(command, args, &group, allow_stderr, log_file)
+            .with_context(|| {
                 let _ = group.delete();
                 "could not create process in cgroup"
             })?;
@@ -176,9 +179,10 @@ impl LimitedProcess {
         command: &str,
         args: &[String],
         allow_stderr: bool,
+        log_file: &Option<File>,
     ) -> anyhow::Result<LimitedProcess> {
-        let child =
-            create_process(command, args, allow_stderr).context("could not create process")?;
+        let child = create_process(command, args, allow_stderr, log_file)
+            .context("could not create process")?;
 
         Ok(LimitedProcess {
             child,

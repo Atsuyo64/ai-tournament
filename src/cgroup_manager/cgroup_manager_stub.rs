@@ -1,4 +1,4 @@
-use std::{process::Child, time::Duration};
+use std::{fs::File, process::Child, time::Duration};
 
 use anyhow::{self, bail, Context};
 
@@ -17,6 +17,7 @@ impl LimitedProcess {
         _max_memory: i64,
         _cpus: &str,
         _allow_stderr: bool,
+        _log_file: &Option<File>,
     ) -> anyhow::Result<LimitedProcess> {
         bail!("cgroups only available on linux")
     }
@@ -31,9 +32,10 @@ impl LimitedProcess {
         command: &str,
         args: &[String],
         allow_stderr: bool,
+        log_file: &Option<File>,
     ) -> anyhow::Result<LimitedProcess> {
-        let child =
-            create_process(command, args, allow_stderr).context("could not create process")?;
+        let child = create_process(command, args, allow_stderr, log_file)
+            .context("could not create process")?;
 
         Ok(LimitedProcess {
             child,
