@@ -104,9 +104,14 @@ fn launch_rock_paper_scissors() {
     let evaluator = Evaluator::new(RPSWrapper::default(), config, params);
     let path = "tests/rock_paper_scissors_agents";
     let tournament = SwissTournament::with_auto_rounds(8);
-    let scores = evaluator.evaluate(&path, tournament).unwrap();
-    for (name, score) in scores.into_iter() {
+    let (scores, failures) = evaluator.evaluate(&path, tournament).unwrap();
+    println!("Working agents:");
+    for (name, score) in scores.iter() {
         println!("{name}: {score}");
+    }
+    println!("Non-compiling agents");
+    for (name, error) in failures.iter() {
+        println!("{name}: {error}");
     }
     // dbg!(scores);
 }

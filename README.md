@@ -116,17 +116,24 @@ fn main() -> anyhow::Result<()> {
     // Define evaluator behaviour
     let config = Configuration::new().with_allow_uncontained(true);
 
-    let factory = YourGame::new(); // Your game logic
+    // Your custom game implementing the Game + GameFactory traits
+    let factory = YourGame::new();
     let evaluator = Evaluator::new(factory, config, constraints);
 
     let tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
-    let results: HashMap<String, SinglePlayerScore> = evaluator.evaluate("path_to_agents_directory", tournament)?;
+    let (results, errors): (HashMap<String, SinglePlayerScore<_>>, _) =
+        evaluator.evaluate("path_to_agents_directory", tournament)?;
 
     // Sort and display scores
     let mut sorted = results.iter().collect::<Vec<_>>();
     sorted.sort_by(|a, b| b.1.cmp(a.1));
     for (agent_name, score) in sorted {
         println!("{agent_name}: {score:?}");
+    }
+    // Print non-compiling agents and the associated error
+    println!("\nNon-compiling agents:");
+    for (agent_name, error) in errors.into_iter() {
+        println!("{agent_name}: {error}");
     }
 
     Ok(())

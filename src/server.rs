@@ -98,11 +98,13 @@ impl<G: Game + Send + 'static, F: GameFactory<G>> Evaluator<G, F> {
     /// Executes a tournament between agents found in the specified directory.
     ///
     /// # Parameters
-    /// - `directory`: Path to the directory containing agent crates
-    /// - `tournament`: Tournament strategy to run
+    /// - `directory`: Path to the directory containing agent crates.
+    /// - `tournament`: Tournament strategy to run.
     ///
     /// # Returns
-    /// A `HashMap` of agent names to final scores, based on the selected tournament strategy.
+    /// Returns a tuple containing:
+    /// - A `HashMap` of agent names to their final scores (`T::FinalScore`) for agents that compiled.
+    /// - A `HashMap` of agent names to error messages (`String`) for agents that failed to compile.
     ///
     /// # Errors
     /// Returns an error if the directory is invalid.
@@ -110,7 +112,7 @@ impl<G: Game + Send + 'static, F: GameFactory<G>> Evaluator<G, F> {
         &self,
         directory: impl AsRef<std::path::Path>,
         mut tournament: T,
-    ) -> anyhow::Result<HashMap<String, T::FinalScore>>
+    ) -> anyhow::Result<(HashMap<String, T::FinalScore>, HashMap<String, String>)>
     where
         T::FinalScore: 'static,
     {
@@ -122,16 +124,19 @@ impl<G: Game + Send + 'static, F: GameFactory<G>> Evaluator<G, F> {
 
         // 2. get agents name & code in *directory*
         let agents = collect_agents(directory.as_ref(), &self.config)?;
-        info!(?agents);
+        let (compiling_agents, non_compiling_agents) =
+            agents.into_iter().partition::<Vec<_>, _>(|a| a.compile);
+        info!(?compiling_agents);
+        tracing::error!(?non_compiling_agents);
 
         // 3. add agents to tournament
-        tournament.add_agents(agents);
+        tournament.add_agents(compiling_agents);
 
         // 4. create scheduler and communication channels
         let mut scheduler = TournamentScheduler::new(self.constraints.clone(), tournament);
         let (tx_result, rx_result) = mpsc::channel();
 
-        // 5. create running matches shared vector (for printing purpose)
+        // 5. create running matches shared vector (for printing purpose only)
         let running = Arc::new(Mutex::new(vec![]));
 
         // 6. Init matches
@@ -149,7 +154,15 @@ impl<G: Game + Send + 'static, F: GameFactory<G>> Evaluator<G, F> {
         if self.config.verbose {
             enable_line_wrap();
         }
-        Ok(Self::collect_final_scores(&scheduler))
+
+        // format results for output
+        let scores = Self::collect_final_scores(&scheduler);
+        let non_compilings = non_compiling_agents
+            .into_iter()
+            .map(|a| (a.name.clone(), a.error_message.clone().unwrap_or_default()))
+            .collect();
+
+        Ok((scores, non_compilings))
     }
 
     fn setup_panic_hook(verbose: bool) {

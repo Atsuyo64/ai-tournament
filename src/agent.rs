@@ -14,6 +14,7 @@ pub struct Agent {
     pub id: u32,
     pub compile: bool,
     pub args: Option<Vec<String>>,
+    pub error_message: Option<String>,
     // pub scores: Vec<f32>,
 }
 
@@ -49,6 +50,20 @@ impl Agent {
             match_number: AtomicUsize::new(1),
             id, // scores: vec![],
             args,
+            error_message: None,
+        }
+    }
+
+    pub fn with_error(name: String, id: u32, msg: String) -> Agent {
+        Agent {
+            name,
+            path_to_exe: None,
+            path_to_log_dir: None,
+            match_number: AtomicUsize::new(1),
+            id,
+            compile: false,
+            args: None,
+            error_message: Some(msg),
         }
     }
 

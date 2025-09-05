@@ -39,6 +39,7 @@ pub fn collect_agents(
     const YELLOW: &str = "\x1b[33m";
     const RESET: &str = "\x1b[0m";
 
+    // get longest subdir name for printing
     let longest_name = std::fs::read_dir(directory)
         .unwrap()
         .filter_map(|res| res.ok())
@@ -79,6 +80,7 @@ pub fn collect_agents(
             .into_string()
             .unwrap();
 
+        // create log directory for this entry
         let log_path = if config.is_logging_enabled() {
             Some(create_log_subdir(config, &name))
         } else {
@@ -99,15 +101,23 @@ pub fn collect_agents(
             if verbose {
                 println!("{RED}Not a directory{RESET}");
             }
+            vec.push(Arc::new(Agent::with_error(
+                name.clone(),
+                ids,
+                format!("Not a directory '{name}'"),
+            )));
+            ids += 1;
             continue;
         }
 
+        // collect path to executable and compilation result (empty if we are not compiling)
         let (res, compilation_output) = if compile {
             agent_compiler::compile_single_agent(&subdir)
         } else {
             (collect_binary(&subdir), "".to_owned())
         };
 
+        // write compilation result to logs
         if let Some(log_path) = log_path.as_ref() {
             let path = log_path.join("compilation.txt");
             let mut file = fs::File::create(&path)
@@ -122,23 +132,36 @@ pub fn collect_agents(
                 error!("agent collection failed: {}", res.as_ref().unwrap_err());
             }
             if verbose {
-                println!("{RED}{}{RESET}", res.unwrap_err());
+                println!("{RED}{}{RESET}", res.as_ref().unwrap_err());
             }
+            vec.push(Arc::new(Agent::with_error(
+                name,
+                ids,
+                format!("agent collection failed: {}", res.as_ref().unwrap_err()),
+            )));
+            ids += 1;
             continue;
         };
 
         if all_configs {
             let configs = config_file_utils::get_all_configs(&subdir);
             let Ok(configs) = configs else {
-                error!("Error getting config: {}", configs.as_ref().unwrap_err());
+                error!("Error collecting config: {}", configs.as_ref().unwrap_err());
                 if verbose {
-                    println!("{RED}{}{RESET}", configs.unwrap_err());
+                    println!("{RED}{}{RESET}", configs.as_ref().unwrap_err());
                 }
+                vec.push(Arc::new(Agent::with_error(
+                    name,
+                    ids,
+                    format!("Error collecting config: {}", configs.as_ref().unwrap_err()),
+                )));
+                ids += 1;
                 continue;
             };
 
             for (config_name, conf) in configs {
                 let args = config_file_utils::get_args_from_config(&conf);
+                let agent_name = format!("{name}-{config_name}");
                 let Ok(args) = args else {
                     warn!(
                         "Config '{config_name}' error: {}",
@@ -147,12 +170,17 @@ pub fn collect_agents(
                     if verbose {
                         print!(
                             "{YELLOW}Config '{config_name}' error: {}, {RESET}",
-                            args.unwrap_err()
+                            args.as_ref().unwrap_err()
                         );
                     }
+                    vec.push(Arc::new(Agent::with_error(
+                        agent_name.clone(),
+                        ids,
+                        format!("{agent_name} config error: {}", args.as_ref().unwrap_err()),
+                    )));
+                    ids += 1;
                     continue;
                 };
-                let agent_name = format!("{name}-{config_name}");
                 let config_log_path = if config.is_logging_enabled() {
                     Some(create_log_subdir(config, &agent_name))
                 } else {
@@ -173,8 +201,17 @@ pub fn collect_agents(
             let Ok(config) = config else {
                 error!("No 'eval' config: {}", config.as_ref().unwrap_err());
                 if verbose {
-                    println!("{RED}No 'eval' config: {}{RESET}", config.unwrap_err());
+                    println!(
+                        "{RED}No 'eval' config: {}{RESET}",
+                        config.as_ref().unwrap_err()
+                    );
                 }
+                vec.push(Arc::new(Agent::with_error(
+                    name,
+                    ids,
+                    format!("No 'eval' config: {}", config.as_ref().unwrap_err()),
+                )));
+                ids += 1;
                 continue;
             };
             let args = config_file_utils::get_args_from_config(&config);
@@ -186,9 +223,15 @@ pub fn collect_agents(
                 if verbose {
                     println!(
                         "{RED}Invalid config: '{config}' ({}){RESET}",
-                        args.unwrap_err()
+                        args.as_ref().unwrap_err()
                     );
                 }
+                vec.push(Arc::new(Agent::with_error(
+                    name,
+                    ids,
+                    format!("Invalid config: {}", args.as_ref().unwrap_err()),
+                )));
+                ids += 1;
                 continue;
             };
 
@@ -199,13 +242,12 @@ pub fn collect_agents(
                 ids,
                 Some(args),
             )));
+            ids += 1;
         }
 
         if verbose {
             println!("{GREEN}Ok{RESET}");
         }
-
-        ids += 1;
     }
 
     Ok(vec)

@@ -68,8 +68,8 @@
 //!     let factory = YourGame::new();
 //!     let evaluator = Evaluator::new(factory, config, constraints);
 //!
-//!     let mut tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
-//!     let results: HashMap<String, SinglePlayerScore<_>> =
+//!     let tournament = SinglePlayerTournament::new(10); // Run 10 games per agent
+//!     let (results, errors): (HashMap<String, SinglePlayerScore<_>>, _) =
 //!         evaluator.evaluate("path_to_agents_directory", tournament)?;
 //!
 //!     // Sort and display scores
@@ -77,6 +77,11 @@
 //!     sorted.sort_by(|a, b| b.1.cmp(a.1));
 //!     for (agent_name, score) in sorted {
 //!         println!("{agent_name}: {score:?}");
+//!     }
+//!     // Print non-compiling agents and the associated error
+//!     println!("\nNon-compiling agents:");
+//!     for (agent_name, error) in errors.into_iter() {
+//!         println!("{agent_name}: {error}");
 //!     }
 //!
 //!     Ok(())
