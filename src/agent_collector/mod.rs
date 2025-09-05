@@ -121,9 +121,9 @@ pub fn collect_agents(
         if let Some(log_path) = log_path.as_ref() {
             let path = log_path.join("compilation.txt");
             let mut file = fs::File::create(&path)
-                .expect(&format!("could not create file {}", path.display()));
+                .unwrap_or_else(|_| panic!("could not create file {}", path.display()));
             file.write_all(compilation_output.as_bytes())
-                .expect(&format!("could not write to file {}", path.display()));
+                .unwrap_or_else(|_| panic!("could not write to file {}", path.display()));
         }
 
         let Ok(res) = res else {

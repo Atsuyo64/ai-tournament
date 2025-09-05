@@ -400,7 +400,7 @@ impl SwissTournament {
 
             let mut byes = vec![];
 
-            assert!(pairs.len() == 0);
+            assert!(pairs.is_empty());
             // pairs.clear();
 
             self.greedy_pairing(&mut byes, &mut pairs);

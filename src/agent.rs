@@ -5,6 +5,8 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
+// Mutable Key safety: mutable AtomicUsize is not used in Hash nor Eq
+#[allow(clippy::mutable_key_type)]
 #[derive(Debug)]
 pub struct Agent {
     pub name: String,
@@ -20,7 +22,7 @@ pub struct Agent {
 
 impl PartialEq for Agent {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
+        self.name == other.name && self.id == other.id && self.args == other.args
     }
 }
 
@@ -77,7 +79,7 @@ impl Agent {
 
         let path = dir_path.join(format!("match_{id}.txt"));
 
-        File::create_new(&path).expect(&format!("file {} already exists", path.display()))
+        File::create_new(&path).unwrap_or_else(|_| panic!("file {} already exists", path.display()))
     }
 
     pub fn should_be_logged(&self) -> bool {

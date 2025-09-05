@@ -16,7 +16,7 @@ pub use cgroup_manager_linux::*;
 #[cfg(not(target_os = "linux"))]
 pub use cgroup_manager_stub::*;
 
-pub(self) fn create_process(
+fn create_process(
     command: &str,
     args: &[String],
     allow_stderr: bool,

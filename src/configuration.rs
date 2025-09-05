@@ -113,7 +113,7 @@ impl Configuration {
         let path = path.as_ref();
 
         if !path.exists() {
-            std::fs::create_dir(&path)
+            std::fs::create_dir(path)
                 .unwrap_or_else(|e| panic!("Could not create directory {}: {}", path.display(), e));
         }
 
